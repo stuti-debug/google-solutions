@@ -1,0 +1,15 @@
+
+> crisisgrid-react@0.0.0 dev
+> vite
+
+
+  VITE v5.4.21  ready in 226 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+8:11:17 PM [vite] .env changed, restarting server...
+8:11:17 PM [vite] server restarted.
+8:39:29 PM [vite] hmr update /src/AppContext.jsx
+8:39:29 PM [vite] hmr invalidate /src/AppContext.jsx Could not Fast Refresh ("AppContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+8:39:29 PM [vite] page reload src/AppContext.jsx
