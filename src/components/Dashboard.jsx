@@ -4,7 +4,7 @@ import MetricCard from './MetricCard';
 import { useAppContext } from '../AppContext';
 
 const Dashboard = () => {
-  const { cleanedData, sessionData, API_BASE_URL, navigate } = useAppContext();
+  const { cleanedData, sessionData, API_BASE_URL, navigate, user, loading } = useAppContext();
   const [floatingQuery, setFloatingQuery] = useState('');
   const [insights, setInsights] = useState([]);
   const [loadingInsights, setLoadingInsights] = useState(true);
@@ -17,6 +17,14 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
+    if (!loading && !user) {
+      navigate('screen-login', { silent: true });
+    }
+  }, [loading, navigate, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
     // If we just uploaded, use Context data. If we refreshed the page, fetch it!
     const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
     
@@ -42,9 +50,14 @@ const Dashboard = () => {
         })
         .catch(err => console.error("Failed to restore dashboard metrics", err));
     }
-  }, [cleanedData, sessionData, API_BASE_URL]);
+  }, [cleanedData, sessionData, API_BASE_URL, user]);
 
   useEffect(() => {
+    if (!user) {
+      setLoadingInsights(false);
+      return;
+    }
+
     const fetchInsights = async () => {
       const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
       if (!sessionId) {
@@ -65,7 +78,11 @@ const Dashboard = () => {
       setLoadingInsights(false);
     };
     fetchInsights();
-  }, [sessionData]);
+  }, [sessionData, user]);
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <section id="screen-dashboard" className="screen active with-nav fade-in">

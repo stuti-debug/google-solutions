@@ -1,21 +1,42 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import toast from 'react-hot-toast';
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { auth, googleProvider } from './firebase';
 
 export const AppContext = createContext();
 
 export const useAppContext = () => useContext(AppContext);
 
+const protectedScreens = new Set([
+  'screen-onboard-1',
+  'screen-onboard-2',
+  'screen-onboard-3',
+  'screen-dashboard',
+  'screen-nlq',
+  'screen-reports',
+  'screen-profile',
+]);
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const AppProvider = ({ children }) => {
   const [cleanedData, setCleanedData] = useState(null);
-  const [sessionData, setSessionData] = useState(null); // hold latest sessionId
+  const [sessionData, setSessionData] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState({
     beneficiaries: null,
     inventory: null,
     donors: null,
   });
   const [currentScreen, setCurrentScreen] = useState('screen-login');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = 'http://localhost:8000';
 
@@ -32,12 +53,11 @@ export const AppProvider = ({ children }) => {
   };
 
   const mergeCleanResults = (results) => {
-    // Normalize single result to same shape as multi-result
     const normalize = (result) => ({
       status: 'success',
       fileType: result.fileType || 'unknown',
-      recordCount: 0, // will be populated by /data fetch
-      cleanedDocuments: [], // will be populated by /data fetch
+      recordCount: 0,
+      cleanedDocuments: [],
       session_id: result.session_id,
       summary: {
         totalFixed: Number(result.summary?.totalFixed || 0),
@@ -77,23 +97,40 @@ export const AppProvider = ({ children }) => {
     return combined;
   };
 
+  const navigate = useCallback(
+    (screenId, options = {}) => {
+      const { silent = false } = options;
+
+      if (protectedScreens.has(screenId) && !user) {
+        setCurrentScreen('screen-login');
+        if (!silent) {
+          toast.error('Please sign in to continue.');
+        }
+        return false;
+      }
+
+      setCurrentScreen(screenId);
+      return true;
+    },
+    [user],
+  );
+
   const pollJobStatus = async (jobId) => {
-    const MAX_POLLING_TIME = 5 * 60 * 1000; // 5 minutes timeout
+    const maxPollingTime = 5 * 60 * 1000;
+    const maxAttempts = 200;
     const startTime = Date.now();
     let attempts = 0;
-    const MAX_ATTEMPTS = 200; // ~5 minutes with 1.5s delays
 
     while (true) {
-      // Check timeout
-      if (Date.now() - startTime > MAX_POLLING_TIME) {
+      if (Date.now() - startTime > maxPollingTime) {
         throw new Error('Cleaning job timed out after 5 minutes. Please try again.');
       }
-      
-      if (attempts >= MAX_ATTEMPTS) {
+
+      if (attempts >= maxAttempts) {
         throw new Error('Maximum polling attempts reached. The job may be stuck.');
       }
-      
-      attempts++;
+
+      attempts += 1;
 
       try {
         const res = await fetch(`${API_BASE_URL}/status/${jobId}`);
@@ -101,30 +138,23 @@ export const AppProvider = ({ children }) => {
           const payload = await res.json().catch(() => ({}));
           throw new Error(extractErrorMessage(payload, 'Polling failed'));
         }
+
         const data = await res.json();
-        
-        console.log(`Polling attempt ${attempts}: Status = ${data.status}`);
-        
+
         if (data.status === 'completed') {
-          return data; // contains session_id and summary
+          return data;
         }
+
         if (data.status === 'failed') {
           throw new Error(data.error || 'Job failed on the server');
         }
-        if (data.status === 'processing' || data.status === 'pending') {
-          await delay(1500); // Wait 1.5s before next check
-          continue;
-        }
-        
-        // Unknown status - wait and retry
-        console.warn(`Unknown status: ${data.status}`);
+
         await delay(1500);
       } catch (error) {
-        console.error(`Polling error on attempt ${attempts}:`, error);
         if (attempts >= 5) {
-          throw error; // Re-throw after 5 failed attempts
+          throw error;
         }
-        await delay(3000); // Wait longer on errors
+        await delay(3000);
       }
     }
   };
@@ -133,7 +163,7 @@ export const AppProvider = ({ children }) => {
     const files = Object.entries(uploadedFiles).filter(([, file]) => !!file);
     if (!files.length) {
       toast.error('Please select at least one file to upload.');
-      setCurrentScreen('screen-onboard-2');
+      navigate('screen-onboard-2', { silent: true });
       return;
     }
 
@@ -153,15 +183,16 @@ export const AppProvider = ({ children }) => {
         }
 
         const jobResult = await pollJobStatus(payload.job_id);
-        
+
         if (jobResult.session_id) {
           localStorage.setItem('crisisgrid_session', jobResult.session_id);
           setSessionData(jobResult.session_id);
         }
+
         return jobResult;
       });
 
-      const UPLOAD_CONCURRENCY = 1;
+      const uploadConcurrency = 1;
       const runWithConcurrency = async (tasks, limit) => {
         const results = new Array(tasks.length);
         let cursor = 0;
@@ -177,18 +208,16 @@ export const AppProvider = ({ children }) => {
 
         const workers = Array.from(
           { length: Math.min(limit, tasks.length) },
-          () => worker()
+          () => worker(),
         );
         await Promise.all(workers);
         return results;
       };
 
-      const responses = await runWithConcurrency(uploadTasks, UPLOAD_CONCURRENCY);
-
+      const responses = await runWithConcurrency(uploadTasks, uploadConcurrency);
       const mergedData = mergeCleanResults(responses);
-
-      // Fetch actual records from the API to populate the dashboard table
       const finalSessionId = mergedData.session_id;
+
       if (finalSessionId) {
         try {
           const dataRes = await fetch(`${API_BASE_URL}/data/${finalSessionId}?page=1&limit=200`);
@@ -203,21 +232,19 @@ export const AppProvider = ({ children }) => {
       }
 
       setCleanedData(mergedData);
+      setChecklistStep?.(4);
       setChecklistSuccess(true);
-      // Let the user see the success state and click "Take me to Dashboard"
     } catch (error) {
       setChecklistSuccess(false);
       toast.error(error.message || 'Upload failed. Please try again.');
-      // Stay on step 3 so user sees the error checklist and can click "Go Back"
     }
   };
 
   const runQuery = async (question) => {
     if (!question) return null;
-    
-    // Retrieve latest session from State or LocalStorage
+
     const storedSession = sessionData || localStorage.getItem('crisisgrid_session');
-    
+
     if (!storedSession) {
       toast.error('No active session found. Please upload data.');
       return null;
@@ -239,6 +266,7 @@ export const AppProvider = ({ children }) => {
       if (!response.ok) {
         throw new Error(extractErrorMessage(payload, 'Query failed.'));
       }
+
       return payload;
     } catch (error) {
       toast.error(error.message || 'Query failed.');
@@ -246,38 +274,93 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const navigate = (screenId) => {
-    setCurrentScreen(screenId);
-  };
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      googleProvider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, googleProvider);
+      setUser(result.user);
 
-  const logout = () => {
-    setCleanedData(null);
-    setSessionData(null);
-    localStorage.removeItem('crisisgrid_session');
-    setUploadedFiles({
-      beneficiaries: null,
-      inventory: null,
-      donors: null,
+      const hasExistingSession = Boolean(localStorage.getItem('crisisgrid_session'));
+      setCurrentScreen(hasExistingSession ? 'screen-dashboard' : 'screen-onboard-1');
+      toast.success(`Welcome${result.user.displayName ? `, ${result.user.displayName}` : ''}.`);
+    } catch (error) {
+      console.error('Sign in error:', error);
+      toast.error(error.code === 'auth/popup-closed-by-user'
+        ? 'Sign-in was cancelled.'
+        : 'Failed to sign in with Google.');
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await signOut(auth);
+      setCleanedData(null);
+      setSessionData(null);
+      setUploadedFiles({
+        beneficiaries: null,
+        inventory: null,
+        donors: null,
+      });
+      localStorage.removeItem('crisisgrid_session');
+      setCurrentScreen('screen-login');
+      toast.success('Logged out successfully.');
+    } catch (error) {
+      toast.error('Logout failed.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+
+      if (!firebaseUser) {
+        setCurrentScreen('screen-login');
+        return;
+      }
+
+      setCurrentScreen((previousScreen) => {
+        if (previousScreen && previousScreen !== 'screen-login') {
+          return previousScreen;
+        }
+
+        return localStorage.getItem('crisisgrid_session')
+          ? 'screen-dashboard'
+          : 'screen-onboard-1';
+      });
     });
-    setCurrentScreen('screen-login');
-  };
 
-  return (
-    <AppContext.Provider
-      value={{
-        cleanedData,
-        sessionData,
-        uploadedFiles,
-        setUploadedFiles,
-        currentScreen,
-        navigate,
-        logout,
-        uploadAndCleanFiles,
-        runQuery,
-        API_BASE_URL,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+    return () => unsubscribe();
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      cleanedData,
+      currentScreen,
+      sessionData,
+      uploadedFiles,
+      setUploadedFiles,
+      user,
+      loading,
+      signInWithGoogle,
+      navigate,
+      logout,
+      uploadAndCleanFiles,
+      runQuery,
+      API_BASE_URL,
+    }),
+    [
+      cleanedData,
+      currentScreen,
+      sessionData,
+      uploadedFiles,
+      user,
+      loading,
+      signInWithGoogle,
+      navigate,
+      logout,
+    ],
   );
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

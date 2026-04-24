@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../AppContext';
 import toast from 'react-hot-toast';
 
 const QueryChat = () => {
-  const { runQuery } = useAppContext();
+  const { runQuery, user, loading: authLoading, navigate } = useAppContext();
   const [inputValue, setInputValue] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [queryLoading, setQueryLoading] = useState(false);
   const [messages, setMessages] = useState([]);
 
   const MAX_QUESTION_LENGTH = 500;
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('screen-login', { silent: true });
+    }
+  }, [authLoading, navigate, user]);
+
+  if (!user) {
+    return null;
+  }
 
   const handleQuery = async (queryText = inputValue) => {
     const text = queryText.trim();
@@ -24,11 +34,11 @@ const QueryChat = () => {
     // Add user message to state
     setMessages((prev) => [...prev, { role: 'user', text }]);
     setInputValue('');
-    setLoading(true);
+    setQueryLoading(true);
     
     const result = await runQuery(text);
     
-    setLoading(false);
+    setQueryLoading(false);
     if (result && result.answer) {
       setMessages((prev) => [
         ...prev, 
@@ -72,8 +82,8 @@ const QueryChat = () => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuery(); }}
             />
-            <button className="btn primary send-btn" onClick={() => handleQuery()} disabled={loading}>
-              {loading ? <i className="ph ph-spinner ph-spin"></i> : <i className="ph ph-arrow-right"></i>}
+            <button className="btn primary send-btn" onClick={() => handleQuery()} disabled={queryLoading}>
+              {queryLoading ? <i className="ph ph-spinner ph-spin"></i> : <i className="ph ph-arrow-right"></i>}
             </button>
           </div>
 

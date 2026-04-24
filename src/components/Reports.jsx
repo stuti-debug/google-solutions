@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppContext } from '../AppContext';
 import toast from 'react-hot-toast';
 
 const Reports = () => {
-  const { sessionData, API_BASE_URL } = useAppContext();
+  const { sessionData, API_BASE_URL, user, loading, navigate } = useAppContext();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('screen-login', { silent: true });
+    }
+  }, [loading, navigate, user]);
+
+  if (!user) {
+    return null;
+  }
 
   const handleDownload = async (reportName) => {
     const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
