@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.production
+firebase-credentials.json
 
 # Database
 *.db
@@ -35,3 +36,4 @@ test_data/
 # Temporary files
 *.tmp
 *.temp
+*.log

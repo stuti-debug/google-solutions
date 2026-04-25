@@ -143,11 +143,12 @@ class SessionStore:
     def save_session(
         self,
         *,
+        session_id: Optional[str] = None,
         file_type: str,
         records: List[Dict[str, Any]],
         summary: Dict[str, Any],
     ) -> str:
-        session_id = uuid.uuid4().hex
+        session_id = session_id or uuid.uuid4().hex
         df = pd.DataFrame(records or [])
         columns = list(df.columns)
         dtypes = {col: str(df[col].dtype) for col in columns}

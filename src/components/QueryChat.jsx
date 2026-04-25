@@ -45,7 +45,7 @@ const QueryChat = () => {
         { 
           role: 'ai', 
           text: result.answer,
-          sql: result.sql,
+          explanation: result.explanation,
           result_count: result.result_count,
           source: result.source,
           warning: result.warning
@@ -138,9 +138,9 @@ const QueryChat = () => {
                       <p>{msg.text}</p>
                     </div>
 
-                    {msg.sql && (
+                    {msg.explanation && (
                       <div className="source-label mt-6" style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--clr-bg)', padding: '0.8rem 1rem', borderRadius: 'var(--radius-sm)' }}>
-                        <i className="ph ph-database"></i> <strong>SQL:</strong> {msg.sql}
+                        <i className="ph ph-funnel"></i> <strong>Query:</strong> {msg.explanation}
                       </div>
                     )}
 

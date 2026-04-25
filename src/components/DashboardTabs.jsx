@@ -1,10 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
 
+const TAB_CONFIG = {
+  beneficiaries: {
+    label: 'Beneficiaries',
+    icon: 'ph-users-three',
+    accent: '#0d7377',
+    emptyIcon: 'ph-user-circle-plus',
+    emptyText: 'No beneficiary records found.',
+  },
+  inventory: {
+    label: 'Inventory',
+    icon: 'ph-package',
+    accent: '#f4a261',
+    emptyIcon: 'ph-cube',
+    emptyText: 'No inventory records found.',
+  },
+  donors: {
+    label: 'Donors',
+    icon: 'ph-hand-heart',
+    accent: '#4caf78',
+    emptyIcon: 'ph-heart',
+    emptyText: 'No donor records found.',
+  },
+};
+
 const DashboardTabs = () => {
   const { cleanedData, sessionData, API_BASE_URL } = useAppContext();
-  
-  // Decide which tab to show by default based on fileType if available, or just 'beneficiaries'
+
   const determineInitialTab = () => {
     const fileType = String(cleanedData?.fileType || '').toLowerCase();
     if (fileType.includes('inventory')) return 'inventory';
@@ -20,30 +43,25 @@ const DashboardTabs = () => {
   useEffect(() => {
     const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
     if (cleanedData && cleanedData.cleanedDocuments) {
-       setRecords(cleanedData.cleanedDocuments);
+      setRecords(cleanedData.cleanedDocuments);
     } else if (sessionId) {
-       // Fetch a large chunk for client-side pagination if refreshed
-       fetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200`)
-         .then(res => res.json())
-         .then(data => {
-            if (data.rows) setRecords(data.rows);
-         })
-         .catch(err => console.error("Failed to restore table records", err));
+      fetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.rows) setRecords(data.rows);
+        })
+        .catch(err => console.error("Failed to restore table records", err));
     }
   }, [cleanedData, sessionData, API_BASE_URL]);
 
-  // Humanize raw DB column names: "beneficiary_id" → "Beneficiary Id"
-  const humanizeHeader = (key) => {
-    return key
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  };
+  const humanizeHeader = (key) =>
+    key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  // Filter out columns where ALL values are null (useless in the table)
+  // Filter out columns where ALL values are null
   const allHeaders = records.length ? Object.keys(records[0]) : [];
-  const headers = allHeaders.filter((h) => {
-    return records.some((row) => row[h] != null && row[h] !== '');
-  });
+  const headers = allHeaders.filter((h) =>
+    records.some((row) => row[h] != null && row[h] !== '')
+  );
 
   const totalPages = Math.ceil(records.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -56,71 +74,116 @@ const DashboardTabs = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
 
+  const tabConfig = TAB_CONFIG[activeTab];
+
   return (
-    <div className="data-panel mt-6">
-      <div className="tabs-header">
-        <button 
-          className={`tab-btn ${activeTab === 'beneficiaries' ? 'active' : ''}`} 
-          onClick={() => { setActiveTab('beneficiaries'); setCurrentPage(1); }}
-        >
-          Beneficiaries
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'inventory' ? 'active' : ''}`} 
-          onClick={() => { setActiveTab('inventory'); setCurrentPage(1); }}
-        >
-          Inventory
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'donors' ? 'active' : ''}`} 
-          onClick={() => { setActiveTab('donors'); setCurrentPage(1); }}
-        >
-          Donors
-        </button>
-        
+    <div className="dashboard-tabs-container mt-6">
+      {/* Premium Tab Bar */}
+      <div className="apple-tabs-bar">
+        {Object.entries(TAB_CONFIG).map(([key, config]) => (
+          <button
+            key={key}
+            className={`apple-tab-btn ${activeTab === key ? 'active' : ''}`}
+            onClick={() => { setActiveTab(key); setCurrentPage(1); }}
+            style={{ '--tab-accent': config.accent }}
+          >
+            <i className={`ph-fill ${config.icon}`}></i>
+            <span>{config.label}</span>
+            {activeTab === key && <div className="tab-indicator" />}
+          </button>
+        ))}
+
         {cleanedData?.fileType && cleanedData.fileType !== 'unknown' && (
-          <span id="dashboard-filetype-badge" className="badge default" style={{ textTransform: 'capitalize' }}>
+          <span className="tab-file-badge">
+            <i className="ph ph-file-text"></i>
             {cleanedData.fileType}
           </span>
         )}
       </div>
-      
-      <div className="tab-content active" style={{ overflowX: 'auto' }}>
-        <table className="data-table dashboard-table">
-          <thead>
-            {headers.length > 0 ? (
-              <tr>
-                {headers.map((h, i) => <th key={i}>{humanizeHeader(h)}</th>)}
-              </tr>
-            ) : (
-              <tr><th>Data</th></tr>
-            )}
-          </thead>
-          <tbody>
-            {headers.length > 0 ? (
-              visibleRecords.map((row, i) => (
-                <tr key={i}>
-                  {headers.map((h, j) => (
-                    <td key={j}>{row[h] != null ? row[h] : <span style={{ color: 'var(--clr-text-muted)', fontStyle: 'italic' }}>—</span>}</td>
+
+      {/* Table Card */}
+      <div className="apple-table-card">
+        {/* Card Header */}
+        <div className="table-card-header">
+          <div className="table-card-title">
+            <div className="title-icon" style={{ background: `${tabConfig.accent}15`, color: tabConfig.accent }}>
+              <i className={`ph-fill ${tabConfig.icon}`}></i>
+            </div>
+            <div>
+              <h3>{tabConfig.label}</h3>
+              <p>{records.length} record{records.length !== 1 ? 's' : ''} found</p>
+            </div>
+          </div>
+          {records.length > 0 && (
+            <div className="table-card-actions">
+              <span className="record-count-pill">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Table Body */}
+        {headers.length > 0 ? (
+          <div className="apple-table-scroll">
+            <table className="apple-data-table">
+              <thead>
+                <tr>
+                  <th className="row-number-col">#</th>
+                  {headers.map((h, i) => (
+                    <th key={i}>{humanizeHeader(h)}</th>
                   ))}
                 </tr>
-              ))
-            ) : (
-              <tr><td>No cleaned records available.</td></tr>
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {visibleRecords.map((row, i) => (
+                  <tr key={i} className="table-row-animate" style={{ animationDelay: `${i * 30}ms` }}>
+                    <td className="row-number-col">{startIndex + i + 1}</td>
+                    {headers.map((h, j) => (
+                      <td key={j}>
+                        {row[h] != null && row[h] !== ''
+                          ? <span className="cell-value">{row[h]}</span>
+                          : <span className="cell-empty">—</span>
+                        }
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="apple-empty-state">
+            <div className="empty-icon-wrap" style={{ background: `${tabConfig.accent}10`, color: tabConfig.accent }}>
+              <i className={`ph-fill ${tabConfig.emptyIcon}`}></i>
+            </div>
+            <p>{tabConfig.emptyText}</p>
+            <span>Upload a file to get started</span>
+          </div>
+        )}
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         {records.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderTop: '1px solid var(--clr-border)' }}>
-             <span style={{ fontSize: '0.9rem', color: 'var(--clr-text-muted)' }}>
-               Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, records.length)} of {records.length} entries
-             </span>
-             <div style={{ display: 'flex', gap: '0.5rem' }}>
-               <button className="btn secondary outline" onClick={handlePrev} disabled={currentPage === 1}>Prev</button>
-               <button className="btn secondary outline" onClick={handleNext} disabled={currentPage === totalPages}>Next</button>
-             </div>
+          <div className="apple-pagination">
+            <span className="pagination-info">
+              Showing {startIndex + 1}–{Math.min(startIndex + itemsPerPage, records.length)} of {records.length}
+            </span>
+            <div className="pagination-buttons">
+              <button
+                className="pagination-btn"
+                onClick={handlePrev}
+                disabled={currentPage === 1}
+              >
+                <i className="ph ph-caret-left"></i>
+              </button>
+              <button
+                className="pagination-btn"
+                onClick={handleNext}
+                disabled={currentPage === totalPages}
+              >
+                <i className="ph ph-caret-right"></i>
+              </button>
+            </div>
           </div>
         )}
       </div>
