@@ -1,0 +1,16 @@
+item_name,category,quantity,unit,district,warehouse,expiry_date,stock_status
+Rice Bags (25kg),Food,150,bags,Chennai,Warehouse Alpha,12-2026,Adequate
+Water Purification Tablets,Water,5000,tablets,Chennai,Chetpet Camp,2025/12/01,Critical
+Woolen Blankets,Shelter,300,pieces,Chennai,Warehouse Beta,N/A,Low
+First Aid Kits (Pro),Medical,45,kits,Chennai,Saidapet Bridge,05-2027,Critical
+High-Energy Biscuits,Food,1200,packets,Chennai,Warehouse Alpha,Jan-2026,Adequate
+Paracetamol (500mg),Medical,2000,strips,Chennai,Chetpet Camp,11/2025,Adequate
+Tents (4-person),Shelter,25,units,Chennai,Warehouse Beta,None,Critical
+Sanitary Pads,Hygiene,850,packs,Chennai,Saidapet Bridge,2027-01-01,Adequate
+Chlorine Bottles,Water,100,liters,Chennai,Warehouse Alpha,08/2026,Low
+Baby Formula,Food,60,cans,Chennai,Chetpet Camp,04-2026,Critical
+ORS Packets,Medical,3000,sachets,Chennai,Saidapet Bridge,Dec 2026,Adequate
+Flashlights (LED),Tools,120,units,Chennai,Warehouse Beta,None,Adequate
+Disposable Gloves,Medical,500,boxes,Chennai,Warehouse Alpha,2028/06,Adequate
+Tarpaulin Sheets,Shelter,200,rolls,Chennai,Saidapet Bridge,N/A,Low
+Milk Powder,Food,400,kg,Chennai,Chetpet Camp,03-2026,Adequate

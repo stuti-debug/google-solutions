@@ -12,7 +12,7 @@ CrisisGrid is an intelligent data cleaning pipeline designed specifically for di
   - Removes duplicates and invalid records
   - Handles missing values and null tokens
 - **Multiple File Formats**: Supports CSV, Excel (.xlsx, .xls)
-- **Web Interface**: FastAPI-based web application for easy file uploads
+- **Web Interface**: Flask-based web application for easy file uploads
 - **Progress Tracking**: Real-time cleaning progress updates
 
 ## Supported Data Types
@@ -58,9 +58,9 @@ cp .env.example .env
 # Edit .env and add your GEMINI_API_KEY
 ```
 
-4. Run the web application:
+6. Run the web application:
 ```bash
-python fastapi_app.py
+python app.py
 ```
 
 5. Open your browser and navigate to `http://localhost:8000`
@@ -82,7 +82,7 @@ import requests
 # Upload file
 with open('your_file.csv', 'rb') as f:
     files = {'file': f}
-    response = requests.post('http://localhost:8000/upload', files=files)
+    response = requests.post('http://localhost:8000/clean', files=files)
 
 # Get session status
 session_id = response.json()['session_id']
@@ -93,6 +93,7 @@ status = requests.get(f'http://localhost:8000/status/{session_id}')
 
 ### Environment Variables
 - `GEMINI_API_KEY`: Your Google Gemini API key (required)
+- `FIREBASE_SERVICE_ACCOUNT_KEY_PATH`: Path to Firebase service account JSON (required)
 - `HOST`: Server host (default: localhost)
 - `PORT`: Server port (default: 8000)
 
@@ -121,10 +122,12 @@ The system automatically detects file types based on:
 ```
 crisisgrid/
 |-- cleaning_pipeline.py      # Core cleaning pipeline
-|-- fastapi_app.py          # Web application
+|-- app.py                  # Web application entry point
 |-- config.py               # Configuration settings
 |-- requirements.txt        # Python dependencies
 |-- .env.example           # Environment variables template
+|-- core/                  # Application configuration and setup
+|-- routes/                # Blueprint route definitions
 |-- services/              # Core services
 |   |-- ai_mapper.py       # Gemini AI integration
 |   |-- cleaner.py         # Data cleaning logic
