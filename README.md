@@ -1,179 +1,133 @@
-# CrisisGrid - AI-Powered Data Cleaning Pipeline
+# CrisisGrid: AI-Powered Resilience for Disaster Relief
 
-CrisisGrid is an intelligent data cleaning pipeline designed specifically for disaster relief and humanitarian organizations. It automatically cleans, standardizes, and structures messy CSV/Excel files using Google's Gemini AI.
+**Revolutionizing Humanitarian Data Management with Google Gemini AI**
 
-## Features
+[![Google Solution Challenge 2026](https://img.shields.io/badge/Google-Solution%20Challenge%202026-blue)](https://developers.google.com/community/solutions-challenge)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **AI-Powered Column Mapping**: Automatically maps messy column names to standardized schemas
-- **Data Type Detection**: Identifies beneficiary, inventory, and donor datasets
-- **Intelligent Cleaning**: 
-  - Normalizes district names and abbreviations
-  - Fixes date formats and numeric fields
-  - Removes duplicates and invalid records
-  - Handles missing values and null tokens
-- **Multiple File Formats**: Supports CSV, Excel (.xlsx, .xls)
-- **Web Interface**: Flask-based web application for easy file uploads
-- **Progress Tracking**: Real-time cleaning progress updates
+## 📌 Problem Statement
+In the wake of a disaster, every second counts. However, relief organizations are often paralyzed by **Data Chaos**. NGOs receive crucial information (beneficiary lists, supply inventories, donor logs) from dozens of field teams, each using different spreadsheet formats, inconsistent naming conventions, and messy, duplicate entries.
 
-## Supported Data Types
+Manually cleaning and unifying this data can take days—days that the most vulnerable populations don't have. **CrisisGrid** solves this by leveraging Google's Gemini AI to automatically clean, standardize, and unify disparate disaster relief datasets in seconds.
 
-### Beneficiary Data
-- Personal information (name, phone, gender)
-- Location data (district, village)
-- Household details (household_size, need_type)
-- Registration dates
+## 🌍 UN Sustainable Development Goals (SDGs)
+CrisisGrid is built to address the core objectives of the Google Solution Challenge by focusing on:
 
-### Inventory Data
-- Item information (name, category, quantity)
-- Storage details (warehouse, location)
-- Expiry dates and last updated timestamps
+*   **SDG 1: No Poverty** – By ensuring that aid reaches the right people without administrative delay, we help prevent vulnerable populations from falling deeper into poverty during crises.
+*   **SDG 11: Sustainable Cities and Communities** – We enhance urban resilience by providing city planners and disaster response teams with accurate, real-time data to manage resources and infrastructure during emergencies.
 
-### Donor Data
-- Donor information (name, type, contact)
-- Donation details (amount, currency, date)
-- Location information
+## 🚀 Live Demo
+**Check out the live application here:** [Live Demo URL Placeholder](https://crisisgrid-demo.vercel.app)
 
-## Quick Start
+---
+
+## 📸 Screenshots
+*(Add your project screenshots here)*
+![Dashboard Preview](https://via.placeholder.com/800x400?text=CrisisGrid+Dashboard+Preview)
+
+---
+
+## 🔥 Impact / Real-World Use Case
+Imagine an NGO responding to a major flood. They receive:
+1.  A "Field_List.csv" from Team A with columns like `name_of_person` and `loc`.
+2.  An "Inventory.xlsx" from Team B with `item_qty` and `wh_location`.
+3.  A "Donors.csv" from a global partner with `Amount_USD` and `Provider`.
+
+**Without CrisisGrid:** A data officer manually copies and pastes for 6 hours.
+**With CrisisGrid:** The officer drops all three files into the dashboard. CrisisGrid's AI identifies the data types, maps the messy columns to a canonical schema, fixes typos in district names, and provides a unified dashboard for decision-makers **in under 60 seconds.**
+
+---
+
+## ✨ Features
+
+-   **AI-Powered Column Mapping**: Automatically maps messy, inconsistent column names to standardized humanitarian schemas.
+-   **Data Type Detection**: Automatically identifies whether a dataset belongs to Beneficiaries, Inventory, or Donors.
+-   **Intelligent Cleaning Pipeline**: 
+    -   **District Normalization**: Fixes typos and abbreviations in geographical data.
+    -   **Schema Standardization**: Enforces date formats and numeric precision.
+    -   **Deduplication**: Intelligent record matching to remove redundant entries.
+    -   **Null Handling**: Intelligent processing of missing values and placeholder tokens.
+-   **Premium Web Interface**: A high-performance dashboard built with React and Flask.
+-   **Natural Language Querying**: Ask questions like *"Which district needs the most food kits?"* and get AI-generated insights from your Firestore data.
+
+---
+
+## 🛠️ Technical Content
 
 ### Prerequisites
 - Python 3.8+
-- Google Gemini API key
+- Google Gemini API Key
+- Firebase Service Account
 
 ### Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/crisisgrid.git
-cd crisisgrid
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/stuti-debug/google-solutions.git
+    cd google-solutions
+    ```
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
-```
+3.  **Set up environment variables:**
+    ```bash
+    cp .env.example .env
+    # Edit .env and add your GEMINI_API_KEY and Firebase path
+    ```
 
-6. Run the web application:
-```bash
-python app.py
-```
+4.  **Run the backend server:**
+    ```bash
+    python app.py
+    ```
 
-5. Open your browser and navigate to `http://localhost:8000`
+5.  **Access the application:**
+    Open your browser and navigate to `http://localhost:8000` (or `http://localhost:5173` if running the React dev server).
 
 ### Command Line Usage
-
-You can also use the pipeline directly from the command line:
-
+You can also use the pipeline directly for batch processing:
 ```bash
-python cleaning_pipeline.py your_file.csv
+python cleaning_pipeline.py your_messy_file.csv
 ```
 
-## API Usage
+## 📊 API Usage
 
 ### Upload and Clean File
 ```python
 import requests
 
 # Upload file
-with open('your_file.csv', 'rb') as f:
+with open('messy_data.csv', 'rb') as f:
     files = {'file': f}
     response = requests.post('http://localhost:8000/clean', files=files)
 
-# Get session status
-session_id = response.json()['session_id']
-status = requests.get(f'http://localhost:8000/status/{session_id}')
+# Get job status
+job_id = response.json()['job_id']
+status = requests.get(f'http://localhost:8000/status/{job_id}')
 ```
 
-## Configuration
-
-### Environment Variables
-- `GEMINI_API_KEY`: Your Google Gemini API key (required)
-- `FIREBASE_SERVICE_ACCOUNT_KEY_PATH`: Path to Firebase service account JSON (required)
-- `HOST`: Server host (default: localhost)
-- `PORT`: Server port (default: 8000)
-
-### File Type Detection
-The system automatically detects file types based on:
-- Column names and patterns
-- Data content and structure
-- AI-powered classification when needed
-
-## Data Cleaning Process
-
-1. **File Reading**: Supports multiple encodings and formats
-2. **Header Normalization**: Cleans and standardizes column names
-3. **Type Detection**: Identifies beneficiary/inventory/donor data
-4. **AI Mapping**: Uses Gemini to map columns to canonical schema
-5. **Data Cleaning**: 
-   - Null token handling
-   - District name normalization
-   - Date and numeric formatting
-   - Duplicate removal
-6. **Validation**: Ensures required fields are present
-7. **Output**: Returns cleaned, structured data
-
-## Project Structure
-
+## 📂 Project Structure
 ```
 crisisgrid/
-|-- cleaning_pipeline.py      # Core cleaning pipeline
-|-- app.py                  # Web application entry point
-|-- config.py               # Configuration settings
-|-- requirements.txt        # Python dependencies
-|-- .env.example           # Environment variables template
-|-- core/                  # Application configuration and setup
-|-- routes/                # Blueprint route definitions
-|-- services/              # Core services
-|   |-- ai_mapper.py       # Gemini AI integration
-|   |-- cleaner.py         # Data cleaning logic
-|   |-- session_store.py   # Session management
-|-- src/                   # Frontend assets
-|-- sample.csv            # Sample data for testing
+|-- core/                  # Security, Firebase, and Global Config
+|-- routes/                # Flask Blueprints (Clean, Query, Data)
+|-- services/              # AI Mapping and Data Logic
+|-- src/                   # React Frontend
+|-- app.py                 # Application Factory
+|-- requirements.txt       # Dependencies
+|-- .env.example           # Config Template
 ```
-
-## Development
-
-### Running Tests
-```bash
-pytest
-```
-
-### Testing AI Integration
-```bash
-python test_gemini.py
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the sample data format
-
-## Privacy & Security
-
-- API keys are stored securely in environment variables
-- No sensitive data is logged or stored permanently
-- Files are processed in memory and not saved to disk
-- Supports data anonymization options
 
 ---
 
-**CrisisGrid** - Making disaster relief data management easier through AI.
+## 🔒 Privacy & Security
+- **In-Memory Processing**: Data is cleaned in-memory to minimize persistent footprints.
+- **Secure Credentials**: All API keys and Firebase secrets are managed via environment variables.
+
+## 📄 License
+Licensed under the MIT License. See `LICENSE` for details.
+
+---
+**CrisisGrid** | *Google Solution Challenge 2026*
