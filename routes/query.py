@@ -14,6 +14,28 @@ from services.ai_mapper import GeminiAIMapper, QuotaExhaustedError, AIMapperErro
 
 query_bp = Blueprint('query', __name__)
 
+
+def _get_firestore_session_meta(session_id: str) -> Optional[Dict[str, Any]]:
+    """Fallback: fetch session metadata from Firestore when local SQLite is empty."""
+    db = get_db()
+    if db is None:
+        return None
+    try:
+        doc = db.collection("sessions").document(session_id).get()
+        if not doc.exists:
+            return None
+        data = doc.to_dict()
+        return {
+            "session_id": session_id,
+            "file_type": data.get("file_type", "unknown"),
+            "record_count": data.get("record_count", 0),
+            "columns": data.get("columns") or data.get("summary", {}).get("columns", []),
+            "summary": data.get("summary", {}),
+        }
+    except Exception:
+        return None
+
+
 # --- Firestore Query Logic ---
 
 def _validate_firestore_query(query_json: Dict[str, Any], default_collection: Optional[str] = None) -> Dict[str, Any]:
@@ -108,6 +130,9 @@ def query_data():
             return jsonify({"code": "INVALID_QUESTION", "message": "Question is required."}), 400
 
         session_meta = store.get_session_meta(session_id)
+        if not session_meta:
+            # Fallback to Firestore
+            session_meta = _get_firestore_session_meta(session_id)
         if not session_meta:
             return jsonify({"code": "SESSION_NOT_FOUND", "message": "Session not found."}), 404
 

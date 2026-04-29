@@ -29,6 +29,7 @@ def _update_firestore_session_doc(
     file_type: Optional[str] = None,
     summary: Optional[Dict[str, Any]] = None,
     record_count: Optional[int] = None,
+    columns: Optional[List[str]] = None,
     error: Optional[str] = None,
 ) -> None:
     db = get_db()
@@ -48,6 +49,8 @@ def _update_firestore_session_doc(
         payload["summary"] = summary
     if record_count is not None:
         payload["record_count"] = int(record_count)
+    if columns is not None:
+        payload["columns"] = columns
     if error is not None:
         payload["error"] = error
     if status == "processing":
@@ -153,6 +156,10 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes) -> None:
         )
 
         _write_records_to_firestore(session_id=session_id, file_type=file_type, records=cleaned_docs)
+
+        # Extract column names for Firestore metadata
+        columns = list(cleaned_docs[0].keys()) if cleaned_docs else []
+
         _update_firestore_session_doc(
             session_id=session_id,
             status="completed",
@@ -161,6 +168,7 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes) -> None:
             file_type=file_type,
             summary=summary,
             record_count=len(cleaned_docs),
+            columns=columns,
         )
     except Exception as exc:
         store.update_job(
