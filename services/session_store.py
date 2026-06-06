@@ -222,11 +222,19 @@ class SessionStore:
                 (session_id, safe_limit, offset),
             ).fetchall()
 
+        import math
+        def _clean_row(r_json: str) -> Dict[str, Any]:
+            row = json.loads(r_json)
+            for k, v in row.items():
+                if isinstance(v, float) and math.isnan(v):
+                    row[k] = None
+            return row
+
         return {
             "page": safe_page,
             "limit": safe_limit,
             "total_records": int(total),
-            "rows": [json.loads(r["row_json"]) for r in rows],
+            "rows": [_clean_row(r["row_json"]) for r in rows],
         }
 
     def get_session_rows(self, session_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -238,7 +246,15 @@ class SessionStore:
 
         with self._connect() as conn:
             rows = conn.execute(query, params).fetchall()
-        return [json.loads(r["row_json"]) for r in rows]
+        import math
+        def _clean_row(r_json: str) -> Dict[str, Any]:
+            row = json.loads(r_json)
+            for k, v in row.items():
+                if isinstance(v, float) and math.isnan(v):
+                    row[k] = None
+            return row
+
+        return [_clean_row(r["row_json"]) for r in rows]
 
     def set_insights(self, session_id: str, insights: List[str]) -> None:
         with self._connect() as conn:

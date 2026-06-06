@@ -667,10 +667,19 @@ class DataCleaner:
         return df, before - len(df)
 
     def _to_firestore_docs(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        df = df.where(pd.notna(df), None)
+        import math
         docs = df.to_dict(orient="records")
 
         def cast(v: Any) -> Any:
+            if isinstance(v, (list, dict, tuple)):
+                return v
+            try:
+                if pd.isna(v):
+                    return None
+            except Exception:
+                pass
+            if isinstance(v, float) and math.isnan(v):
+                return None
             if isinstance(v, pd.Timestamp):
                 return v.strftime("%Y-%m-%d")
             if hasattr(v, "item"):

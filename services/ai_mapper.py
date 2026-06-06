@@ -5,8 +5,8 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 
-from google import genai
-from google.genai import types
+import vertexai
+from vertexai.generative_models import GenerativeModel, GenerationConfig
 
 from config import get_settings
 
@@ -22,23 +22,27 @@ class QuotaExhaustedError(AIMapperError):
 class GeminiAIMapper:
     def __init__(
         self,
-        gemini_api_key: Optional[str] = None,
+        gcp_project_id: Optional[str] = None,
+        gcp_location: Optional[str] = None,
         model_name: Optional[str] = None,
         retries: Optional[int] = None,
     ):
-        settings = get_settings(strict=gemini_api_key is None)
-        api_key = gemini_api_key or settings.gemini_api_key
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY is not set. Please configure it in a .env file.")
+        settings = get_settings(strict=gcp_project_id is None)
+        project_id = gcp_project_id or settings.gcp_project_id
+        location = gcp_location or settings.gcp_location
 
-        self.client = genai.Client(api_key=api_key)
-        self.model_name = model_name or settings.gemini_model or "gemini-1.5-flash"
+        if not project_id:
+            raise ValueError("GCP_PROJECT_ID is not set. Please configure it in a .env file.")
+
+        # Initialize Vertex AI SDK
+        vertexai.init(project=project_id, location=location)
+
+        self.model_name = model_name or settings.gemini_model or "gemini-2.5-flash"
         self.retries = settings.gemini_json_retries if retries is None else max(0, retries)
-        resolve_model = os.getenv("GEMINI_RESOLVE_MODEL", "false").strip().lower() in {"1", "true", "yes", "on"}
-        if resolve_model:
-            self.model_name = self._resolve_model_name(self.model_name)
-        else:
-            self.model_name = self.model_name.replace("models/", "").strip()
+        self.model_name = self.model_name.replace("models/", "").strip()
+
+        # Create the GenerativeModel instance
+        self.model = GenerativeModel(self.model_name)
 
     def request_json(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         return self._request_json(payload)
@@ -49,10 +53,9 @@ class GeminiAIMapper:
 
         for attempt in range(max_retries + 1):
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(temperature=temperature),
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=GenerationConfig(temperature=temperature),
                 )
                 return self._extract_text(response)
             except Exception as exc:
@@ -145,10 +148,9 @@ class GeminiAIMapper:
                     "Return ONLY one valid JSON object matching the schema."
                 )
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=GenerationConfig(
                         temperature=0,
                         response_mime_type="application/json",
                     ),
@@ -159,40 +161,13 @@ class GeminiAIMapper:
                 err_str = str(exc)
                 last_error = exc
                 is_quota = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
-                is_not_found = "NOT_FOUND" in err_str
 
                 if is_quota and attempt == max_retries:
                     raise QuotaExhaustedError(f"Gemini API quota exhausted: {err_str}") from exc
-                if is_not_found and attempt == 0:
-                    self.model_name = self._resolve_model_name(self.model_name)
                 if attempt < max_retries:
                     time.sleep(self._retry_delay_seconds(attempt))
 
         raise AIMapperError(f"Gemini JSON response parsing failed after retries: {last_error}")
-
-    def _resolve_model_name(self, requested: str) -> str:
-        requested_clean = requested.replace("models/", "").strip()
-
-        try:
-            available = [model.name for model in self.client.models.list()]
-        except Exception:
-            return requested_clean
-
-        available_clean = {name.replace("models/", ""): name for name in available}
-        if requested_clean in available_clean:
-            return available_clean[requested_clean]
-
-        fallback_order = [
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-001",
-            "gemini-2.0-flash-lite",
-            "gemini-2.5-flash",
-        ]
-        for candidate in fallback_order:
-            if candidate in available_clean:
-                return available_clean[candidate]
-
-        return requested_clean
 
     def _extract_text(self, response: Any) -> str:
         text = (getattr(response, "text", "") or "").strip()

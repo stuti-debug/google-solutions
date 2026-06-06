@@ -204,15 +204,21 @@ def clean_upload():
             return jsonify({"code": "EMPTY_UPLOAD", "message": "Uploaded file is empty."}), 400
         
         # Max content length is handled by Flask config, but we can double check
-        if len(raw) > (10 * 1024 * 1024):
-            return jsonify({"code": "FILE_TOO_LARGE", "message": "File exceeds 10MB limit."}), 413
+        if len(raw) > (50 * 1024 * 1024):
+            return jsonify({"code": "FILE_TOO_LARGE", "message": "File exceeds 50MB limit."}), 413
 
         job_id = store.create_job(filename=filename)
         CLEAN_JOB_EXECUTOR.submit(_run_clean_job, job_id, filename, raw)
         return jsonify({"job_id": job_id, "status": "processing"})
     except ValueError as exc:
         return jsonify({"code": "INVALID_FILE_TYPE", "message": str(exc)}), 400
-    except Exception:
+    except Exception as exc:
+        from werkzeug.exceptions import HTTPException
+        if isinstance(exc, HTTPException):
+            return jsonify({"code": "HTTP_ERROR", "message": str(exc.description or exc.name)}), exc.code
+        
+        import traceback
+        traceback.print_exc()
         return jsonify({"code": "INTERNAL_ERROR", "message": "An unexpected error occurred during upload."}), 500
 
 @clean_bp.route('/status/<job_id>', methods=['GET'])

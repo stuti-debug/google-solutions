@@ -21,7 +21,7 @@ def create_app():
     app = Flask(__name__)
     
     # 3. Configure app
-    app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB limit
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
     app.config["RATELIMIT_STORAGE_URI"] = os.getenv(
         "RATELIMIT_STORAGE_URI",
         os.getenv("REDIS_URL", "redis://localhost:6379/0"),

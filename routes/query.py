@@ -76,12 +76,15 @@ def execute_firestore_query(query_json: Dict[str, Any]) -> List[Dict[str, Any]]:
     
     docs = query_ref.limit(plan["limit"]).stream()
     
+    import math
     results = []
     for doc in docs:
         d = doc.to_dict()
-        for k, v in d.items():
+        for k, v in list(d.items()):
             if hasattr(v, "isoformat"):
                 d[k] = v.isoformat()
+            elif isinstance(v, float) and math.isnan(v):
+                d[k] = None
         d["id"] = doc.id
         results.append(d)
     return results
