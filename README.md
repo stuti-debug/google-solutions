@@ -13,7 +13,7 @@ In the wake of a disaster, every second counts. However, relief organizations ar
 
 Manually cleaning and unifying this data can take days—days that the most vulnerable populations don't have. 
 
-**CrisisGrid** solves this by leveraging **Google Cloud Vertex AI** and **Gemini 2.5 Flash** to automatically clean, standardize, and unify disparate disaster relief datasets in seconds.
+**CrisisGrid** solves this by leveraging **Google Cloud Vertex AI** and **Gemini 3.5 Flash** to automatically clean, standardize, and unify disparate disaster relief datasets in seconds.
 
 ---
 
@@ -43,7 +43,7 @@ Imagine an NGO responding to a major flood. They receive:
 *   **Deep Semantic Cleaning (Vertex AI)**: Fixes spelling errors in geographical regions, normalizes date formats, and strictly enforces numeric precision.
 *   **Enterprise-Grade Scalability**: Processes files up to **50MB** effortlessly. Uses robust data casting to eliminate JSON serialization crashes (e.g., NaN handling).
 *   **Google Cloud Integration**: 
-    *   **Vertex AI (Gemini 2.5 Flash)** for rapid, secure, and highly deterministic data cleaning.
+    *   **Vertex AI (Gemini 3.5 Flash)** for rapid, secure, and highly deterministic data cleaning.
     *   **Cloud Firestore** for real-time storage and fallback persistence.
 *   **Natural Language Querying**: Ask questions like *"Which district needs the most food kits?"* directly in the dashboard and get AI-generated insights from your Firestore database.
 
@@ -76,8 +76,8 @@ cp .env.example .env
 ```env
 # Google Cloud Vertex AI Configuration
 GCP_PROJECT_ID=your_gcp_project_id
-GCP_LOCATION=us-central1
-GEMINI_MODEL=gemini-2.5-flash
+GCP_LOCATION=global
+GEMINI_MODEL=gemini-3.5-flash
 
 # Firebase Configuration
 FIREBASE_PROJECT_ID=your_firebase_project_id

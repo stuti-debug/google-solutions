@@ -20,9 +20,9 @@ def get_settings(strict: bool = True) -> Settings:
     if not gcp_project_id and strict:
         raise ValueError("GCP_PROJECT_ID is not set. Please configure it in a .env file.")
 
-    gcp_location = os.getenv("GCP_LOCATION", "us-central1").strip()
+    gcp_location = os.getenv("GCP_LOCATION", "global").strip()
 
-    gemini_model = (os.getenv("GEMINI_MODEL", "gemini-2.5-flash") or "gemini-2.5-flash").strip()
+    gemini_model = (os.getenv("GEMINI_MODEL", "gemini-3.5-flash") or "gemini-3.5-flash").strip()
 
     retries_raw = (os.getenv("GEMINI_JSON_RETRIES", "1") or "1").strip()
     try:

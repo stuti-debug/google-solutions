@@ -12,7 +12,7 @@ class CrisisGridCleaningPipeline:
         self,
         gcp_project_id: Optional[str] = None,
         gcp_location: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = "gemini-3.5-flash",
     ):
         settings = get_settings(strict=gcp_project_id is None)
         mapper = GeminiAIMapper(
