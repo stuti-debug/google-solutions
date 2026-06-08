@@ -66,8 +66,11 @@ const DashboardTabs = () => {
         .then(res => res.json())
         .then(data => {
           if (data.rows) setRecords(data.rows);
+          else setRecords([]);
         })
         .catch(err => console.error("Failed to restore table records", err));
+    } else {
+      setRecords([]);
     }
   }, [activeTab, cleanedData, sessionData, API_BASE_URL]);
 

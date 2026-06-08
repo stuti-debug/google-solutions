@@ -142,6 +142,7 @@ const UploadOnboarding = () => {
                     {category}
                   </h4>
                   <label 
+                    htmlFor={`file-upload-${category}`}
                     className={`upload-box ${uploadedFiles[category] ? 'drag-over' : ''}`}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleFileDrop(e, category)}
@@ -151,6 +152,7 @@ const UploadOnboarding = () => {
                     <span>{uploadedFiles[category] ? uploadedFiles[category].name : 'Drop files here or click'}</span>
                     <div className="badges"><span className="badge file-badge">CSV</span><span className="badge file-badge">XLSX</span></div>
                     <input 
+                      id={`file-upload-${category}`}
                       type="file" 
                       accept=".csv,.xlsx,.xls" 
                       style={{ display: 'none' }}

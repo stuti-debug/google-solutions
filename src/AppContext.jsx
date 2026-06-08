@@ -30,7 +30,6 @@ export const AppProvider = ({ children }) => {
   const [cleanedData, setCleanedData] = useState(null);
   const [cleanedDataMap, setCleanedDataMap] = useState({});
   const [sessionData, setSessionData] = useState(null);
-  const [sessionMap, setSessionMap] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState({
     beneficiaries: null,
     inventory: null,
@@ -161,31 +160,52 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   const uploadAndCleanFiles = async (setChecklistStep, setChecklistSuccess) => {
-    const files = Object.entries(uploadedFiles).filter(([, file]) => !!file);
-    if (!files.length) {
-      toast.error('Please select at least one file to upload.');
-      navigate('screen-onboard-2', { silent: true });
+    const selectedFiles = [
+      { file: uploadedFiles.beneficiaries, category: 'beneficiary' },
+      { file: uploadedFiles.inventory, category: 'inventory' },
+      { file: uploadedFiles.donors, category: 'donor' },
+    ].filter((f) => f.file);
+
+    if (selectedFiles.length === 0) {
+      toast.error('Please upload at least one file.');
       return;
     }
 
+    setChecklistStep?.(0);
+    setChecklistSuccess(null);
+
+    const batchSessionId = generateUUID();
+
     try {
-      const uploadTasks = files.map(([category, file]) => async () => {
-        const formData = new FormData();
-        formData.append('file', file, file.name || `${category}.csv`);
+      const uploadTasks = selectedFiles.map((fObj) => {
+        return async () => {
+          const category = fObj.category;
+          const file = fObj.file;
+          const formData = new FormData();
+          formData.append('file', file, file.name || `${category}.csv`);
+          formData.append('session_id', batchSessionId);
 
-        const response = await fetch(`${API_BASE_URL}/clean`, {
-          method: 'POST',
-          body: formData,
-        });
+          const response = await fetch(`${API_BASE_URL}/clean`, {
+            method: 'POST',
+            body: formData,
+          });
 
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(extractErrorMessage(payload, `Upload failed for ${category}`));
-        }
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(extractErrorMessage(payload, `Upload failed for ${category}`));
+          }
 
-        const jobResult = await pollJobStatus(payload.job_id);
-        return { ...jobResult, category };
+          const jobResult = await pollJobStatus(payload.job_id);
+          return { ...jobResult, category };
+        };
       });
 
       const uploadConcurrency = 1;
@@ -213,31 +233,14 @@ export const AppProvider = ({ children }) => {
       const responses = await runWithConcurrency(uploadTasks, uploadConcurrency);
       const mergedData = mergeCleanResults(responses);
       
-      let currentSessionMap = {};
-      try {
-        const stored = localStorage.getItem('crisisgrid_session_map');
-        if (stored) {
-          currentSessionMap = JSON.parse(stored);
-        }
-      } catch (e) {}
-      
-      const newSessionMap = { ...currentSessionMap };
-      responses.forEach((res) => {
-        if (res.session_id) {
-          newSessionMap[res.category] = res.session_id;
-        }
-      });
-      localStorage.setItem('crisisgrid_session_map', JSON.stringify(newSessionMap));
-      
-      const primaryId = Object.values(newSessionMap)[0] || '';
-      localStorage.setItem('crisisgrid_session', primaryId);
-      setSessionData(primaryId);
-      setSessionMap(newSessionMap);
+      localStorage.setItem('crisisgrid_session', batchSessionId);
+      setSessionData(batchSessionId);
 
       const newDataMap = {};
-      const fetchPromises = Object.entries(newSessionMap).map(async ([type, sId]) => {
+      const fetchPromises = responses.map(async (res) => {
+        const type = res.category;
         try {
-          const dataRes = await fetch(`${API_BASE_URL}/data/${sId}?page=1&limit=200`);
+          const dataRes = await fetch(`${API_BASE_URL}/data/${batchSessionId}?page=1&limit=200&file_type=${type}`);
           if (dataRes.ok) {
             const dataPayload = await dataRes.json();
             newDataMap[type] = dataPayload.rows || [];
@@ -261,28 +264,12 @@ export const AppProvider = ({ children }) => {
   const runQuery = async (question) => {
     if (!question) return null;
 
-    let storedSessionMap = sessionMap;
-    if (!storedSessionMap) {
-      try {
-        const raw = localStorage.getItem('crisisgrid_session_map');
-        if (raw) storedSessionMap = JSON.parse(raw);
-      } catch (e) {}
-    }
+    let storedSession = sessionData || localStorage.getItem('crisisgrid_session');
 
-    if (!storedSessionMap) {
-      const singleSession = sessionData || localStorage.getItem('crisisgrid_session');
-      if (singleSession) {
-        storedSessionMap = { default: singleSession };
-      }
-    }
-
-    if (!storedSessionMap || Object.keys(storedSessionMap).length === 0) {
+    if (!storedSession) {
       toast.error('No active session found. Please upload data.');
       return null;
     }
-    
-    // Send ALL session IDs so the backend can route to the correct dataset
-    const firstSessionId = Object.values(storedSessionMap)[0] || '';
 
     try {
       const response = await fetch(`${API_BASE_URL}/query`, {
@@ -292,8 +279,7 @@ export const AppProvider = ({ children }) => {
         },
         body: JSON.stringify({
           question,
-          session_id: firstSessionId,
-          session_ids: storedSessionMap,
+          session_id: storedSession,
         }),
       });
 
@@ -331,14 +317,12 @@ export const AppProvider = ({ children }) => {
       await signOut(auth);
       setCleanedData(null);
       setSessionData(null);
-      setSessionMap(null);
       setUploadedFiles({
         beneficiaries: null,
         inventory: null,
         donors: null,
       });
       localStorage.removeItem('crisisgrid_session');
-      localStorage.removeItem('crisisgrid_session_map');
       setCurrentScreen('screen-login');
       toast.success('Logged out successfully.');
     } catch (error) {
