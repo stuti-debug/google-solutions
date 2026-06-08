@@ -30,6 +30,7 @@ export const AppProvider = ({ children }) => {
   const [cleanedData, setCleanedData] = useState(null);
   const [cleanedDataMap, setCleanedDataMap] = useState({});
   const [sessionData, setSessionData] = useState(null);
+  const [sessionMap, setSessionMap] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState({
     beneficiaries: null,
     inventory: null,
@@ -214,8 +215,8 @@ export const AppProvider = ({ children }) => {
       
       let currentSessionMap = {};
       try {
-        const stored = localStorage.getItem('crisisgrid_session');
-        if (stored && stored.startsWith('{')) {
+        const stored = localStorage.getItem('crisisgrid_session_map');
+        if (stored) {
           currentSessionMap = JSON.parse(stored);
         }
       } catch (e) {}
@@ -226,8 +227,12 @@ export const AppProvider = ({ children }) => {
           newSessionMap[res.category] = res.session_id;
         }
       });
-      localStorage.setItem('crisisgrid_session', JSON.stringify(newSessionMap));
-      setSessionData(newSessionMap);
+      localStorage.setItem('crisisgrid_session_map', JSON.stringify(newSessionMap));
+      
+      const primaryId = Object.values(newSessionMap)[0] || '';
+      localStorage.setItem('crisisgrid_session', primaryId);
+      setSessionData(primaryId);
+      setSessionMap(newSessionMap);
 
       const newDataMap = {};
       const fetchPromises = Object.entries(newSessionMap).map(async ([type, sId]) => {
@@ -256,24 +261,28 @@ export const AppProvider = ({ children }) => {
   const runQuery = async (question) => {
     if (!question) return null;
 
-    let storedSession = sessionData;
-    if (!storedSession) {
+    let storedSessionMap = sessionMap;
+    if (!storedSessionMap) {
       try {
-        const raw = localStorage.getItem('crisisgrid_session');
-        storedSession = raw?.startsWith('{') ? JSON.parse(raw) : raw;
-      } catch (e) {
-        storedSession = null;
+        const raw = localStorage.getItem('crisisgrid_session_map');
+        if (raw) storedSessionMap = JSON.parse(raw);
+      } catch (e) {}
+    }
+
+    if (!storedSessionMap) {
+      const singleSession = sessionData || localStorage.getItem('crisisgrid_session');
+      if (singleSession) {
+        storedSessionMap = { default: singleSession };
       }
     }
 
-    if (!storedSession) {
+    if (!storedSessionMap || Object.keys(storedSessionMap).length === 0) {
       toast.error('No active session found. Please upload data.');
       return null;
     }
     
     // Send ALL session IDs so the backend can route to the correct dataset
-    const sessionMap = typeof storedSession === 'object' ? storedSession : { default: storedSession };
-    const firstSessionId = Object.values(sessionMap)[0] || '';
+    const firstSessionId = Object.values(storedSessionMap)[0] || '';
 
     try {
       const response = await fetch(`${API_BASE_URL}/query`, {
@@ -284,7 +293,7 @@ export const AppProvider = ({ children }) => {
         body: JSON.stringify({
           question,
           session_id: firstSessionId,
-          session_ids: sessionMap,
+          session_ids: storedSessionMap,
         }),
       });
 
@@ -322,12 +331,14 @@ export const AppProvider = ({ children }) => {
       await signOut(auth);
       setCleanedData(null);
       setSessionData(null);
+      setSessionMap(null);
       setUploadedFiles({
         beneficiaries: null,
         inventory: null,
         donors: null,
       });
       localStorage.removeItem('crisisgrid_session');
+      localStorage.removeItem('crisisgrid_session_map');
       setCurrentScreen('screen-login');
       toast.success('Logged out successfully.');
     } catch (error) {
