@@ -14,6 +14,14 @@ from services.ai_mapper import GeminiAIMapper, QuotaExhaustedError, AIMapperErro
 
 query_bp = Blueprint('query', __name__)
 
+# Map file_type to collection name used by Gemini
+FILE_TYPE_TO_COLLECTION = {
+    "beneficiary": "beneficiaries",
+    "inventory": "inventory",
+    "donor": "donors",
+}
+COLLECTION_TO_FILE_TYPE = {v: k for k, v in FILE_TYPE_TO_COLLECTION.items()}
+
 
 def _get_firestore_session_meta(session_id: str) -> Optional[Dict[str, Any]]:
     """Fallback: fetch session metadata from Firestore when local SQLite is empty."""
@@ -36,76 +44,108 @@ def _get_firestore_session_meta(session_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-# --- Firestore Query Logic ---
-
-def _validate_firestore_query(query_json: Dict[str, Any], default_collection: Optional[str] = None) -> Dict[str, Any]:
-    if not isinstance(query_json, dict):
-        raise ValueError("Firestore query plan must be a JSON object.")
-
-    collection = str(query_json.get("collection") or default_collection or "").strip()
-    if not collection or not FIRESTORE_COLLECTION_PATTERN.match(collection):
-        raise ValueError("Invalid or missing Firestore collection name.")
-
-    raw_filters = query_json.get("filters", [])
-    filters: List[List[Any]] = []
-    for raw_filter in raw_filters:
-        if not isinstance(raw_filter, (list, tuple)) or len(raw_filter) != 3:
-            continue
-        field, operator, value = raw_filter
-        field_s, op_s = str(field).strip(), str(operator).strip()
-        if FIRESTORE_FIELD_PATTERN.match(field_s) and op_s in ALLOWED_FIRESTORE_OPERATORS:
-            filters.append([field_s, op_s, value])
-
-    limit = min(int(query_json.get("limit", 100)), 100)
-    return {
-        "collection": collection,
-        "filters": filters,
-        "limit": max(1, limit),
-        "explanation": str(query_json.get("explanation", "")).strip(),
-    }
-
-def execute_firestore_query(query_json: Dict[str, Any]) -> List[Dict[str, Any]]:
-    db = get_db()
-    if db is None:
-        raise RuntimeError("Firestore not initialized")
-    
-    plan = _validate_firestore_query(query_json)
-    query_ref = db.collection(plan["collection"])
-    for field, operator, value in plan["filters"]:
-        query_ref = query_ref.where(field, operator, value)
-    
-    docs = query_ref.limit(plan["limit"]).stream()
-    
-    import math
+def _gather_all_session_meta(session_ids: List[str]) -> List[Dict[str, Any]]:
+    """Gather metadata for all provided session IDs."""
     results = []
-    for doc in docs:
-        d = doc.to_dict()
-        for k, v in list(d.items()):
-            if hasattr(v, "isoformat"):
-                d[k] = v.isoformat()
-            elif isinstance(v, float) and math.isnan(v):
-                d[k] = None
-        d["id"] = doc.id
-        results.append(d)
+    for sid in session_ids:
+        meta = store.get_session_meta(sid)
+        if not meta:
+            meta = _get_firestore_session_meta(sid)
+        if meta:
+            results.append(meta)
     return results
+
+
+# --- Local Query Execution ---
+
+def _execute_local_query(session_id: str, filters: List[List[Any]], limit: int = 100) -> List[Dict[str, Any]]:
+    """Query rows from local SQLite and apply filters in Python."""
+    records = store.get_session_rows(session_id, limit=500)
+    
+    filtered = []
+    for row in records:
+        match = True
+        for field, operator, value in filters:
+            if field == "session_id":
+                continue
+                
+            row_val = row.get(field)
+            if row_val is None:
+                match = False
+                break
+                
+            if operator == "==":
+                if str(row_val).strip().lower() != str(value).strip().lower():
+                    match = False
+                    break
+            elif operator == ">":
+                try:
+                    if float(row_val) <= float(value): match = False; break
+                except: match = False; break
+            elif operator == "<":
+                try:
+                    if float(row_val) >= float(value): match = False; break
+                except: match = False; break
+            elif operator == ">=":
+                try:
+                    if float(row_val) < float(value): match = False; break
+                except: match = False; break
+            elif operator == "<=":
+                try:
+                    if float(row_val) > float(value): match = False; break
+                except: match = False; break
+                
+        if match:
+            filtered.append(row)
+            if len(filtered) >= limit:
+                break
+                
+    return filtered
+
 
 # --- AI Planning ---
 
-def _plan_firestore_query(mapper: GeminiAIMapper, question: str, session_meta: Dict[str, Any]) -> Dict[str, Any]:
-    # Simplified mapping for demonstration - in real use, this uses GeminiAIMapper
+def _plan_query_with_context(mapper: GeminiAIMapper, question: str, all_meta: List[Dict[str, Any]], sample_rows_map: Dict[str, List[Dict]]) -> Dict[str, Any]:
+    """
+    Send Gemini the full context of ALL uploaded datasets so it can pick the
+    right collection AND use the correct field names for filtering.
+    """
+    # Build a description of every available dataset
+    datasets_description = []
+    for meta in all_meta:
+        ft = meta.get("file_type", "unknown")
+        collection = FILE_TYPE_TO_COLLECTION.get(ft, ft)
+        columns = meta.get("columns", [])
+        sample = sample_rows_map.get(meta["session_id"], [])
+        desc = {
+            "collection": collection,
+            "file_type": ft,
+            "columns": columns,
+            "record_count": meta.get("record_count", 0),
+            "sample_rows": sample[:3],
+        }
+        datasets_description.append(desc)
+
     payload = {
-        "task": "question_to_firestore_query",
+        "task": "question_to_query",
         "question": question,
-        "schema": session_meta.get("columns", []),
+        "available_datasets": datasets_description,
+        "instructions": [
+            "Pick the single most relevant collection for this question",
+            "Use ONLY column names that exist in that dataset's columns list",
+            "For filter values, match the casing/format seen in sample_rows",
+            "Return strict JSON only, no markdown",
+        ],
         "output_schema": {
-            "collection": "string",
-            "filters": [["field", "operator", "value"]],
-            "limit": "number",
+            "collection": "string (one of the available collection names)",
+            "filters": [["column_name", "operator", "value"]],
+            "limit": "number (default 100)",
             "explanation": "string"
         }
     }
     data = mapper.request_json(payload)
-    return _validate_firestore_query(data)
+    return data
+
 
 def _is_greeting(text: str) -> bool:
     greetings = {"hi", "hello", "hey", "hola", "greetings", "good morning", "good afternoon"}
@@ -118,7 +158,23 @@ def _is_greeting(text: str) -> bool:
 def query_data():
     payload = request.get_json(silent=True) or {}
     question = str(payload.get("question", "")).strip()
+    
+    # Accept both single session_id and session_ids map/list
     session_id = str(payload.get("session_id", "")).strip()
+    session_ids_raw = payload.get("session_ids")
+    
+    # Build a list of all valid session IDs
+    all_session_ids = []
+    if session_ids_raw:
+        if isinstance(session_ids_raw, dict):
+            all_session_ids = list(session_ids_raw.values())
+        elif isinstance(session_ids_raw, list):
+            all_session_ids = session_ids_raw
+    if session_id and session_id not in all_session_ids:
+        all_session_ids.append(session_id)
+    
+    # Remove empty strings
+    all_session_ids = [s for s in all_session_ids if s and s.strip()]
 
     if _is_greeting(question):
         return jsonify({
@@ -128,48 +184,86 @@ def query_data():
         })
 
     try:
-        validate_session_id(session_id)
         if not question:
             return jsonify({"code": "INVALID_QUESTION", "message": "Question is required."}), 400
+        
+        if not all_session_ids:
+            return jsonify({"code": "NO_SESSION", "message": "No session data found. Please upload data first."}), 400
 
-        session_meta = store.get_session_meta(session_id)
-        if not session_meta:
-            # Fallback to Firestore
-            session_meta = _get_firestore_session_meta(session_id)
-        if not session_meta:
-            return jsonify({"code": "SESSION_NOT_FOUND", "message": "Session not found."}), 404
+        # Validate all session IDs
+        for sid in all_session_ids:
+            validate_session_id(sid)
+
+        # Gather metadata for all sessions
+        all_meta = _gather_all_session_meta(all_session_ids)
+        if not all_meta:
+            return jsonify({"code": "SESSION_NOT_FOUND", "message": "No valid sessions found."}), 404
+
+        # Pre-fetch sample rows for each session so Gemini can see real data
+        sample_rows_map = {}
+        for meta in all_meta:
+            sid = meta["session_id"]
+            rows = store.get_session_rows(sid, limit=3)
+            sample_rows_map[sid] = rows
 
         mapper = GeminiAIMapper()
+        
         try:
-            query_plan = _plan_firestore_query(mapper, question, session_meta)
-        except Exception:
-            # Fallback
+            query_plan = _plan_query_with_context(mapper, question, all_meta, sample_rows_map)
+        except Exception as e:
+            # Fallback: use first session with no filters
             query_plan = {
-                "collection": "beneficiaries",
-                "filters": [["session_id", "==", session_id]],
+                "collection": FILE_TYPE_TO_COLLECTION.get(all_meta[0].get("file_type", ""), "beneficiaries"),
+                "filters": [],
                 "limit": 50,
-                "explanation": "Fallback query"
+                "explanation": "Fallback: returning all records from the first dataset"
             }
 
-        # Force session scoping
-        scoped = False
-        for f in query_plan["filters"]:
-            if f[0] == "session_id" and f[2] == session_id:
-                scoped = True
-                break
-        if not scoped:
-            query_plan["filters"].append(["session_id", "==", session_id])
-
-        rows = execute_firestore_query(query_plan)
+        # Resolve which session_id to query based on the collection Gemini picked
+        target_collection = str(query_plan.get("collection", "")).strip().lower()
+        target_file_type = COLLECTION_TO_FILE_TYPE.get(target_collection, target_collection)
         
-        # Generate Answer
-        prompt = f"Question: {question}\nData: {json.dumps(rows[:10])}\nAnswer concisely."
+        # Find the matching session
+        target_session_id = None
+        target_meta = None
+        for meta in all_meta:
+            if meta.get("file_type") == target_file_type:
+                target_session_id = meta["session_id"]
+                target_meta = meta
+                break
+        
+        # Fallback to first session if no match
+        if not target_session_id:
+            target_session_id = all_meta[0]["session_id"]
+            target_meta = all_meta[0]
+
+        # Extract and validate filters
+        raw_filters = query_plan.get("filters", [])
+        valid_filters = []
+        for f in raw_filters:
+            if isinstance(f, (list, tuple)) and len(f) == 3:
+                field, op, value = str(f[0]).strip(), str(f[1]).strip(), f[2]
+                if FIRESTORE_FIELD_PATTERN.match(field) and op in ALLOWED_FIRESTORE_OPERATORS:
+                    valid_filters.append([field, op, value])
+
+        limit = min(int(query_plan.get("limit", 100)), 100)
+
+        # Execute against the correct session
+        rows = _execute_local_query(target_session_id, valid_filters, limit=limit)
+        
+        # Generate natural language answer
+        prompt = f"Question: {question}\nData ({len(rows)} records): {json.dumps(rows[:10])}\nAnswer concisely based on the data. If no data, say so."
         answer = mapper.generate_text(prompt=prompt)
 
         return jsonify({
             "answer": answer,
-            "query": query_plan,
-            "explanation": query_plan.get("explanation"),
+            "query": {
+                "collection": target_collection,
+                "filters": valid_filters,
+                "limit": limit,
+                "explanation": str(query_plan.get("explanation", "")),
+            },
+            "explanation": str(query_plan.get("explanation", "")),
             "result_count": len(rows),
             "results_preview": rows[:50],
             "source": "ai"

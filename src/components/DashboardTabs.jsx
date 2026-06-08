@@ -26,10 +26,16 @@ const TAB_CONFIG = {
 };
 
 const DashboardTabs = () => {
-  const { cleanedData, sessionData, API_BASE_URL } = useAppContext();
+  const { cleanedData, cleanedDataMap, sessionData, API_BASE_URL } = useAppContext();
 
   const determineInitialTab = () => {
-    const fileType = String(cleanedData?.fileType || '').toLowerCase();
+    // If we have data in the map, default to the first one that has records
+    if (cleanedDataMap && Object.keys(cleanedDataMap).length > 0) {
+      if (cleanedDataMap.beneficiaries?.length > 0) return 'beneficiaries';
+      if (cleanedDataMap.inventory?.length > 0) return 'inventory';
+      if (cleanedDataMap.donors?.length > 0) return 'donors';
+    }
+    const fileType = String((cleanedData && cleanedData.fileType) || '').toLowerCase();
     if (fileType.includes('inventory')) return 'inventory';
     if (fileType.includes('donor')) return 'donors';
     return 'beneficiaries';
@@ -41,18 +47,53 @@ const DashboardTabs = () => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
-    if (cleanedData && cleanedData.cleanedDocuments) {
-      setRecords(cleanedData.cleanedDocuments);
-    } else if (sessionId) {
-      fetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.rows) setRecords(data.rows);
-        })
-        .catch(err => console.error("Failed to restore table records", err));
+    if (cleanedDataMap && cleanedDataMap[activeTab]) {
+      setRecords(cleanedDataMap[activeTab]);
+      return;
     }
-  }, [cleanedData, sessionData, API_BASE_URL]);
+
+    let currentSessionMap = sessionData;
+    if (!currentSessionMap) {
+      try {
+        const raw = localStorage.getItem('crisisgrid_session');
+        currentSessionMap = raw?.startsWith('{') ? JSON.parse(raw) : raw;
+      } catch (e) {
+        currentSessionMap = null;
+      }
+    }
+
+    if (currentSessionMap && typeof currentSessionMap === 'object') {
+      const sId = currentSessionMap[activeTab];
+      if (sId) {
+        fetch(`${API_BASE_URL}/data/${sId}?page=1&limit=200`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.rows) setRecords(data.rows);
+            else setRecords([]);
+          })
+          .catch(err => {
+            console.error("Failed to restore table records", err);
+            setRecords([]);
+          });
+      } else {
+        setRecords([]);
+      }
+    } else if (typeof currentSessionMap === 'string') {
+       // Legacy fallback
+       fetch(`${API_BASE_URL}/data/${currentSessionMap}?page=1&limit=200`)
+         .then(res => res.json())
+         .then(data => {
+           if (data.rows) setRecords(data.rows);
+           else setRecords([]);
+         })
+         .catch(err => {
+           console.error("Failed to restore table records", err);
+           setRecords([]);
+         });
+    } else {
+      setRecords([]);
+    }
+  }, [activeTab, cleanedDataMap, sessionData, API_BASE_URL]);
 
   const humanizeHeader = (key) =>
     key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -93,7 +134,7 @@ const DashboardTabs = () => {
           </button>
         ))}
 
-        {cleanedData?.fileType && cleanedData.fileType !== 'unknown' && (
+        {cleanedData && cleanedData.fileType && cleanedData.fileType !== 'unknown' && (
           <span className="tab-file-badge">
             <i className="ph ph-file-text"></i>
             {cleanedData.fileType}

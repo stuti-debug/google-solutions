@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from core.security import validate_session_id
 from core.app_globals import store
 from core.firebase import get_db
+import json
+from services.ai_mapper import GeminiAIMapper
 
 data_bp = Blueprint('data', __name__)
 
@@ -110,20 +112,70 @@ def get_session_data(session_id: str):
     except Exception:
         return jsonify({"code": "INTERNAL_ERROR", "message": "Failed to retrieve data."}), 500
 
-@data_bp.route('/insights/<session_id>', methods=['GET'])
-def get_insights(session_id: str):
+@data_bp.route('/insights', methods=['POST'])
+def get_insights():
     try:
-        validate_session_id(session_id)
-        # Dummy insights logic for demo
+        payload = request.get_json(silent=True) or {}
+        session_ids = payload.get("session_ids", [])
+        
+        if not session_ids:
+            return jsonify({"insights": []})
+
+        summaries = []
+        for s_id in session_ids:
+            try:
+                validate_session_id(s_id)
+                meta = store.get_session_meta(s_id)
+                if not meta:
+                    meta = _get_firestore_session_meta(s_id)
+                if meta:
+                    summaries.append({
+                        "file_type": meta.get("file_type"),
+                        "record_count": meta.get("record_count"),
+                        "summary_stats": meta.get("summary")
+                    })
+            except Exception:
+                continue
+
+        if not summaries:
+             return jsonify({"insights": []})
+             
+        prompt = (
+            "You are an AI assistant analyzing multiple disaster relief datasets. "
+            "We have uploaded the following datasets. Here is their metadata and summary stats:\n"
+            f"{json.dumps(summaries, indent=2)}\n\n"
+            "Based on these summaries (such as record counts, error types, duplicate counts), "
+            "generate exactly 3 actionable and realistic insights that an NGO coordinator would find useful. "
+            "Output strictly as a JSON object matching this schema:\n"
+            '{"insights": ["insight 1", "insight 2", "insight 3"]}\n'
+            "Return only valid JSON. Do not include markdown blocks."
+        )
+
+        mapper = GeminiAIMapper()
+        response_text = mapper.generate_text(prompt, temperature=0.2)
+        
+        # In case the response has markdown formatting
+        cleaned = response_text.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+
+        data = json.loads(cleaned)
+        return jsonify(data)
+    except Exception as e:
+        print("Error generating insights:", e)
+        # Fallback to demo insights
         return jsonify({
             "insights": [
-                "Most beneficiaries are from Chetpet Camp.",
-                "Water supply is at critical level in 3 locations.",
-                "Food kits distribution is 85% complete."
+                "Error generating real insights. Please check API quota.",
+                "Ensure Gemini API key is configured.",
+                "Check server logs for details."
             ]
         })
-    except Exception:
-        return jsonify({"insights": []})
 
 @data_bp.route('/reports/<session_id>', methods=['GET'])
 def get_reports(session_id: str):

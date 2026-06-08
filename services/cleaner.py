@@ -24,6 +24,7 @@ CANONICAL_SCHEMAS: Dict[str, List[str]] = {
         "village",
         "household_size",
         "need_type",
+        "status",
         "date_registered",
     ],
     "inventory": [
@@ -35,6 +36,7 @@ CANONICAL_SCHEMAS: Dict[str, List[str]] = {
         "district",
         "warehouse",
         "expiry_date",
+        "stock_status",
         "last_updated",
     ],
     "donor": [
@@ -46,6 +48,7 @@ CANONICAL_SCHEMAS: Dict[str, List[str]] = {
         "district",
         "amount",
         "currency",
+        "payment_status",
         "date_donated",
     ],
 }

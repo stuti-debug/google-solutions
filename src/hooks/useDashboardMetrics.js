@@ -25,8 +25,7 @@ export const useDashboardMetrics = () => {
   useEffect(() => {
     if (!user) return;
 
-    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
-    if (cleanedData) {
+    if (cleanedData && cleanedData.fileType === 'multiple') {
       setMetrics({
         recordCount: cleanedData.recordCount || 0,
         totalFixed: cleanedData.summary?.totalFixed || 0,
@@ -37,25 +36,67 @@ export const useDashboardMetrics = () => {
       return;
     }
 
-    if (!sessionId) {
+    let currentSessionMap = sessionData;
+    if (!currentSessionMap) {
+      try {
+        const raw = localStorage.getItem('crisisgrid_session');
+        currentSessionMap = raw?.startsWith('{') ? JSON.parse(raw) : raw;
+      } catch (e) {
+        currentSessionMap = null;
+      }
+    }
+
+    if (!currentSessionMap) {
       setMetrics(EMPTY_METRICS);
       return;
     }
 
     let cancelled = false;
-    fetch(`${API_BASE_URL}/data/${sessionId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (cancelled) return;
+
+    const fetchAllMetrics = async () => {
+      let sessionIds = [];
+      if (typeof currentSessionMap === 'object') {
+        sessionIds = Object.values(currentSessionMap);
+      } else {
+        sessionIds = [currentSessionMap];
+      }
+
+      let totalRecordCount = 0;
+      let totalFixed = 0;
+      let totalDuplicates = 0;
+      let totalDropped = 0;
+      const allLogs = [];
+
+      await Promise.all(sessionIds.map(async (sId) => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/data/${sId}?page=1&limit=1`);
+          if (res.ok) {
+            const data = await res.json();
+            totalRecordCount += data.total_records || 0;
+            totalFixed += data.summary?.totalFixed || 0;
+            totalDuplicates += data.summary?.removedDuplicates || 0;
+            totalDropped += data.summary?.droppedInvalidRows || 0;
+            if (data.summary?.error_logs) {
+              allLogs.push(...data.summary.error_logs);
+            }
+          }
+        } catch(err) {
+          console.error("Failed to fetch metrics for", sId, err);
+        }
+      }));
+
+      if (!cancelled) {
         setMetrics({
-          recordCount: data.total_records || 0,
-          totalFixed: data.summary?.totalFixed || 0,
-          removedDuplicates: data.summary?.removedDuplicates || 0,
-          droppedInvalidRows: data.summary?.droppedInvalidRows || 0,
-          errorLogs: data.summary?.error_logs || [],
+          recordCount: totalRecordCount,
+          totalFixed: totalFixed,
+          removedDuplicates: totalDuplicates,
+          droppedInvalidRows: totalDropped,
+          errorLogs: allLogs,
         });
-      })
-      .catch((err) => console.error('Failed to restore dashboard metrics', err));
+      }
+    };
+
+    fetchAllMetrics();
 
     return () => {
       cancelled = true;
@@ -68,10 +109,26 @@ export const useDashboardMetrics = () => {
       return;
     }
 
-    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
-    if (!sessionId) {
+    let currentSessionMap = sessionData;
+    if (!currentSessionMap) {
+      try {
+        const raw = localStorage.getItem('crisisgrid_session');
+        currentSessionMap = raw?.startsWith('{') ? JSON.parse(raw) : raw;
+      } catch (e) {
+        currentSessionMap = null;
+      }
+    }
+
+    if (!currentSessionMap) {
       setLoadingInsights(false);
       return;
+    }
+
+    let sessionIds = [];
+    if (typeof currentSessionMap === 'object') {
+      sessionIds = Object.values(currentSessionMap);
+    } else {
+      sessionIds = [currentSessionMap];
     }
 
     let cancelled = false;
@@ -79,7 +136,11 @@ export const useDashboardMetrics = () => {
 
     const fetchInsights = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/insights/${sessionId}`);
+        const res = await fetch(`${API_BASE_URL}/insights`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ session_ids: sessionIds })
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data.insights)) {

@@ -28,6 +28,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const AppProvider = ({ children }) => {
   const [cleanedData, setCleanedData] = useState(null);
+  const [cleanedDataMap, setCleanedDataMap] = useState({});
   const [sessionData, setSessionData] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState({
     beneficiaries: null,
@@ -183,13 +184,7 @@ export const AppProvider = ({ children }) => {
         }
 
         const jobResult = await pollJobStatus(payload.job_id);
-
-        if (jobResult.session_id) {
-          localStorage.setItem('crisisgrid_session', jobResult.session_id);
-          setSessionData(jobResult.session_id);
-        }
-
-        return jobResult;
+        return { ...jobResult, category };
       });
 
       const uploadConcurrency = 1;
@@ -216,20 +211,38 @@ export const AppProvider = ({ children }) => {
 
       const responses = await runWithConcurrency(uploadTasks, uploadConcurrency);
       const mergedData = mergeCleanResults(responses);
-      const finalSessionId = mergedData.session_id;
+      
+      let currentSessionMap = {};
+      try {
+        const stored = localStorage.getItem('crisisgrid_session');
+        if (stored && stored.startsWith('{')) {
+          currentSessionMap = JSON.parse(stored);
+        }
+      } catch (e) {}
+      
+      const newSessionMap = { ...currentSessionMap };
+      responses.forEach((res) => {
+        if (res.session_id) {
+          newSessionMap[res.category] = res.session_id;
+        }
+      });
+      localStorage.setItem('crisisgrid_session', JSON.stringify(newSessionMap));
+      setSessionData(newSessionMap);
 
-      if (finalSessionId) {
+      const newDataMap = {};
+      const fetchPromises = Object.entries(newSessionMap).map(async ([type, sId]) => {
         try {
-          const dataRes = await fetch(`${API_BASE_URL}/data/${finalSessionId}?page=1&limit=200`);
+          const dataRes = await fetch(`${API_BASE_URL}/data/${sId}?page=1&limit=200`);
           if (dataRes.ok) {
             const dataPayload = await dataRes.json();
-            mergedData.recordCount = dataPayload.total_records || 0;
-            mergedData.cleanedDocuments = dataPayload.rows || [];
+            newDataMap[type] = dataPayload.rows || [];
           }
         } catch (fetchErr) {
-          console.error('Failed to fetch records after cleaning:', fetchErr);
+          console.error(`Failed to fetch records for ${type}:`, fetchErr);
         }
-      }
+      });
+      await Promise.all(fetchPromises);
+      setCleanedDataMap(newDataMap);
 
       setCleanedData(mergedData);
       setChecklistStep?.(4);
@@ -243,12 +256,24 @@ export const AppProvider = ({ children }) => {
   const runQuery = async (question) => {
     if (!question) return null;
 
-    const storedSession = sessionData || localStorage.getItem('crisisgrid_session');
+    let storedSession = sessionData;
+    if (!storedSession) {
+      try {
+        const raw = localStorage.getItem('crisisgrid_session');
+        storedSession = raw?.startsWith('{') ? JSON.parse(raw) : raw;
+      } catch (e) {
+        storedSession = null;
+      }
+    }
 
     if (!storedSession) {
       toast.error('No active session found. Please upload data.');
       return null;
     }
+    
+    // Send ALL session IDs so the backend can route to the correct dataset
+    const sessionMap = typeof storedSession === 'object' ? storedSession : { default: storedSession };
+    const firstSessionId = Object.values(sessionMap)[0] || '';
 
     try {
       const response = await fetch(`${API_BASE_URL}/query`, {
@@ -258,7 +283,8 @@ export const AppProvider = ({ children }) => {
         },
         body: JSON.stringify({
           question,
-          session_id: storedSession,
+          session_id: firstSessionId,
+          session_ids: sessionMap,
         }),
       });
 
@@ -336,6 +362,7 @@ export const AppProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       cleanedData,
+      cleanedDataMap,
       currentScreen,
       sessionData,
       uploadedFiles,
@@ -351,6 +378,7 @@ export const AppProvider = ({ children }) => {
     }),
     [
       cleanedData,
+      cleanedDataMap,
       currentScreen,
       sessionData,
       uploadedFiles,
