@@ -10,14 +10,12 @@ from services.cleaner import CleaningPipelineError, DataCleaner
 class CrisisGridCleaningPipeline:
     def __init__(
         self,
-        gcp_project_id: Optional[str] = None,
-        gcp_location: Optional[str] = None,
-        model_name: str = "gemini-3.5-flash",
+        gemini_api_key: Optional[str] = None,
+        model_name: str = "gemini-1.5-flash",
     ):
-        settings = get_settings(strict=gcp_project_id is None)
+        settings = get_settings(strict=gemini_api_key is None)
         mapper = GeminiAIMapper(
-            gcp_project_id=gcp_project_id or settings.gcp_project_id,
-            gcp_location=gcp_location or settings.gcp_location,
+            gemini_api_key=gemini_api_key or settings.gemini_api_key,
             model_name=model_name,
         )
         self.cleaner = DataCleaner(mapper=mapper)

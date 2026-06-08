@@ -4,6 +4,7 @@ import { useAppContext } from '../AppContext';
 const TAB_CONFIG = {
   beneficiaries: {
     label: 'Beneficiaries',
+    fileType: 'beneficiary',
     icon: 'ph-users-three',
     accent: '#0d7377',
     emptyIcon: 'ph-user-circle-plus',
@@ -11,6 +12,7 @@ const TAB_CONFIG = {
   },
   inventory: {
     label: 'Inventory',
+    fileType: 'inventory',
     icon: 'ph-package',
     accent: '#f4a261',
     emptyIcon: 'ph-cube',
@@ -18,6 +20,7 @@ const TAB_CONFIG = {
   },
   donors: {
     label: 'Donors',
+    fileType: 'donor',
     icon: 'ph-hand-heart',
     accent: '#4caf78',
     emptyIcon: 'ph-heart',
@@ -26,16 +29,10 @@ const TAB_CONFIG = {
 };
 
 const DashboardTabs = () => {
-  const { cleanedData, cleanedDataMap, sessionData, API_BASE_URL } = useAppContext();
+  const { cleanedData, sessionData, API_BASE_URL } = useAppContext();
 
   const determineInitialTab = () => {
-    // If we have data in the map, default to the first one that has records
-    if (cleanedDataMap && Object.keys(cleanedDataMap).length > 0) {
-      if (cleanedDataMap.beneficiaries?.length > 0) return 'beneficiaries';
-      if (cleanedDataMap.inventory?.length > 0) return 'inventory';
-      if (cleanedDataMap.donors?.length > 0) return 'donors';
-    }
-    const fileType = String((cleanedData && cleanedData.fileType) || '').toLowerCase();
+    const fileType = String(cleanedData?.fileType || '').toLowerCase();
     if (fileType.includes('inventory')) return 'inventory';
     if (fileType.includes('donor')) return 'donors';
     return 'beneficiaries';
@@ -44,69 +41,94 @@ const DashboardTabs = () => {
   const [activeTab, setActiveTab] = useState(determineInitialTab());
   const [currentPage, setCurrentPage] = useState(1);
   const [records, setRecords] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+  const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 10;
 
+  // Reset sorting and searching on tab change
   useEffect(() => {
-    if (cleanedDataMap && cleanedDataMap[activeTab]) {
-      setRecords(cleanedDataMap[activeTab]);
-      return;
-    }
+    setSortConfig({ key: null, direction: 'ascending' });
+    setSearchQuery('');
+  }, [activeTab]);
 
-    let currentSessionMap = sessionData;
-    if (!currentSessionMap) {
-      try {
-        const raw = localStorage.getItem('crisisgrid_session');
-        currentSessionMap = raw?.startsWith('{') ? JSON.parse(raw) : raw;
-      } catch (e) {
-        currentSessionMap = null;
-      }
-    }
+  useEffect(() => {
+    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
+    const requestedType = TAB_CONFIG[activeTab].fileType;
 
-    if (currentSessionMap && typeof currentSessionMap === 'object') {
-      const sId = currentSessionMap[activeTab];
-      if (sId) {
-        fetch(`${API_BASE_URL}/data/${sId}?page=1&limit=200`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.rows) setRecords(data.rows);
-            else setRecords([]);
-          })
-          .catch(err => {
-            console.error("Failed to restore table records", err);
-            setRecords([]);
-          });
-      } else {
-        setRecords([]);
-      }
-    } else if (typeof currentSessionMap === 'string') {
-       // Legacy fallback
-       fetch(`${API_BASE_URL}/data/${currentSessionMap}?page=1&limit=200`)
-         .then(res => res.json())
-         .then(data => {
-           if (data.rows) setRecords(data.rows);
-           else setRecords([]);
-         })
-         .catch(err => {
-           console.error("Failed to restore table records", err);
-           setRecords([]);
-         });
-    } else {
-      setRecords([]);
+    if (cleanedData?.documentsByType?.[requestedType]) {
+      setRecords(cleanedData.documentsByType[requestedType]);
+    } else if (cleanedData?.cleanedDocuments && cleanedData.fileType !== 'multiple') {
+      setRecords(
+        cleanedData.cleanedDocuments.filter((row) => !row._file_type || row._file_type === requestedType),
+      );
+    } else if (sessionId) {
+      fetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${requestedType}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.rows) setRecords(data.rows);
+        })
+        .catch(err => console.error("Failed to restore table records", err));
     }
-  }, [activeTab, cleanedDataMap, sessionData, API_BASE_URL]);
+  }, [activeTab, cleanedData, sessionData, API_BASE_URL]);
 
   const humanizeHeader = (key) =>
     key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   // Filter out columns where ALL values are null
-  const allHeaders = records.length ? Object.keys(records[0]) : [];
+  const allHeaders = records.length ? Object.keys(records[0]).filter((key) => !key.startsWith('_')) : [];
   const headers = allHeaders.filter((h) =>
     records.some((row) => row[h] != null && row[h] !== '')
   );
 
-  const totalPages = Math.ceil(records.length / itemsPerPage) || 1;
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedRecords = React.useMemo(() => {
+    let sortableItems = [...records];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+
+        const numA = Number(valA);
+        const numB = Number(valB);
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return sortConfig.direction === 'ascending' ? numA - numB : numB - numA;
+        }
+
+        valA = valA ? String(valA).toLowerCase() : '';
+        valB = valB ? String(valB).toLowerCase() : '';
+        if (valA < valB) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (valA > valB) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [records, sortConfig]);
+
+  const filteredRecords = React.useMemo(() => {
+    if (!searchQuery) return sortedRecords;
+    const query = searchQuery.toLowerCase();
+    return sortedRecords.filter(row => {
+      return Object.entries(row).some(([key, val]) => {
+        if (key.startsWith('_')) return false;
+        return val != null && String(val).toLowerCase().includes(query);
+      });
+    });
+  }, [sortedRecords, searchQuery]);
+
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const visibleRecords = records.slice(startIndex, startIndex + itemsPerPage);
+  const visibleRecords = filteredRecords.slice(startIndex, startIndex + itemsPerPage);
 
   const handleNext = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
@@ -134,7 +156,7 @@ const DashboardTabs = () => {
           </button>
         ))}
 
-        {cleanedData && cleanedData.fileType && cleanedData.fileType !== 'unknown' && (
+        {cleanedData?.fileType && cleanedData.fileType !== 'unknown' && (
           <span className="tab-file-badge">
             <i className="ph ph-file-text"></i>
             {cleanedData.fileType}
@@ -145,23 +167,44 @@ const DashboardTabs = () => {
       {/* Table Card */}
       <div className="apple-table-card">
         {/* Card Header */}
-        <div className="table-card-header">
+        <div className="table-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div className="table-card-title">
             <div className="title-icon" style={{ background: `${tabConfig.accent}15`, color: tabConfig.accent }}>
               <i className={`ph-fill ${tabConfig.icon}`}></i>
             </div>
             <div>
               <h3>{tabConfig.label}</h3>
-              <p>{records.length} record{records.length !== 1 ? 's' : ''} found</p>
+              <p>{filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} found</p>
             </div>
           </div>
-          {records.length > 0 && (
-            <div className="table-card-actions">
-              <span className="record-count-pill">
-                Page {currentPage} of {totalPages}
-              </span>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            {records.length > 0 && (
+              <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--clr-bg)', padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid var(--glass-border)' }}>
+                <i className="ph ph-magnifying-glass" style={{ color: 'var(--clr-text-muted)', fontSize: '0.95rem' }}></i>
+                <input
+                  type="text"
+                  placeholder="Search table..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.85rem', color: 'var(--clr-text)', width: '180px' }}
+                />
+                {searchQuery && (
+                  <i 
+                    className="ph ph-x" 
+                    onClick={() => setSearchQuery('')} 
+                    style={{ cursor: 'pointer', color: 'var(--clr-text-muted)', fontSize: '0.85rem' }}
+                  ></i>
+                )}
+              </div>
+            )}
+            {filteredRecords.length > 0 && (
+              <div className="table-card-actions">
+                <span className="record-count-pill">
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Table Body */}
@@ -171,9 +214,25 @@ const DashboardTabs = () => {
               <thead>
                 <tr>
                   <th className="row-number-col">#</th>
-                  {headers.map((h, i) => (
-                    <th key={i}>{humanizeHeader(h)}</th>
-                  ))}
+                  {headers.map((h, i) => {
+                    const isSorted = sortConfig.key === h;
+                    return (
+                      <th 
+                        key={i} 
+                        onClick={() => requestSort(h)} 
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          {humanizeHeader(h)}
+                          <i className={
+                            isSorted 
+                              ? (sortConfig.direction === 'ascending' ? 'ph ph-caret-up' : 'ph ph-caret-down')
+                              : 'ph ph-caret-up-down'
+                          } style={{ opacity: isSorted ? 1 : 0.3, fontSize: '0.9rem' }}></i>
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -198,16 +257,16 @@ const DashboardTabs = () => {
             <div className="empty-icon-wrap" style={{ background: `${tabConfig.accent}10`, color: tabConfig.accent }}>
               <i className={`ph-fill ${tabConfig.emptyIcon}`}></i>
             </div>
-            <p>{tabConfig.emptyText}</p>
-            <span>Upload a file to get started</span>
+            <p>{searchQuery ? 'No matching records found.' : tabConfig.emptyText}</p>
+            <span>{searchQuery ? 'Try adjusting your search terms' : 'Upload a file to get started'}</span>
           </div>
         )}
 
         {/* Pagination */}
-        {records.length > 0 && (
+        {filteredRecords.length > 0 && (
           <div className="apple-pagination">
             <span className="pagination-info">
-              Showing {startIndex + 1}–{Math.min(startIndex + itemsPerPage, records.length)} of {records.length}
+              Showing {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredRecords.length)} of {filteredRecords.length}
             </span>
             <div className="pagination-buttons">
               <button

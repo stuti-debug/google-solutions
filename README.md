@@ -1,128 +1,133 @@
 # CrisisGrid: AI-Powered Resilience for Disaster Relief
 
-**Revolutionizing Humanitarian Data Management with Google Cloud Vertex AI**
+**Revolutionizing Humanitarian Data Management with Google Gemini AI**
 
 [![Google Solution Challenge 2026](https://img.shields.io/badge/Google-Solution%20Challenge%202026-blue)](https://developers.google.com/community/solutions-challenge)
-[![Powered by Vertex AI](https://img.shields.io/badge/Powered_by-Vertex_AI-orange)](https://cloud.google.com/vertex-ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
-
-## 📌 Problem Statement: The "Data Chaos" of Disaster Relief
+## 📌 Problem Statement
 In the wake of a disaster, every second counts. However, relief organizations are often paralyzed by **Data Chaos**. NGOs receive crucial information (beneficiary lists, supply inventories, donor logs) from dozens of field teams, each using different spreadsheet formats, inconsistent naming conventions, and messy, duplicate entries.
 
-Manually cleaning and unifying this data can take days—days that the most vulnerable populations don't have. 
-
-**CrisisGrid** solves this by leveraging **Google Cloud Vertex AI** and **Gemini 3.5 Flash** to automatically clean, standardize, and unify disparate disaster relief datasets in seconds.
-
----
+Manually cleaning and unifying this data can take days—days that the most vulnerable populations don't have. **CrisisGrid** solves this by leveraging Google's Gemini AI to automatically clean, standardize, and unify disparate disaster relief datasets in seconds.
 
 ## 🌍 UN Sustainable Development Goals (SDGs)
-CrisisGrid is built to address the core objectives of the Google Solution Challenge:
+CrisisGrid is built to address the core objectives of the Google Solution Challenge by focusing on:
 
 *   **SDG 1: No Poverty** – By ensuring that aid reaches the right people without administrative delay, we help prevent vulnerable populations from falling deeper into poverty during crises.
-*   **SDG 11: Sustainable Cities and Communities** – We enhance urban resilience by providing city planners and disaster response teams with accurate, clean, and real-time data to manage resources during emergencies.
-*   **SDG 17: Partnerships for the Goals** – CrisisGrid acts as the unified data clearinghouse that allows multiple NGOs and government agencies to seamlessly share data without format conflicts.
+*   **SDG 11: Sustainable Cities and Communities** – We enhance urban resilience by providing city planners and disaster response teams with accurate, real-time data to manage resources and infrastructure during emergencies.
+
+## 🚀 Live Demo
+**Check out the live application here:** [Live Demo URL Placeholder](https://crisisgrid-demo.vercel.app)
 
 ---
 
-## 🔥 Real-World Impact
+## 📸 Screenshots
+*(Add your project screenshots here)*
+![Dashboard Preview](https://via.placeholder.com/800x400?text=CrisisGrid+Dashboard+Preview)
+
+---
+
+## 🔥 Impact / Real-World Use Case
 Imagine an NGO responding to a major flood. They receive:
-1.  A `Field_List.csv` from Team A with columns like `name_of_person` and `loc`.
-2.  An `Inventory.xlsx` from Team B with `item_qty` and `wh_location`.
-3.  A `Donors.csv` from a global partner with `Amount_USD` and `Provider`.
+1.  A "Field_List.csv" from Team A with columns like `name_of_person` and `loc`.
+2.  An "Inventory.xlsx" from Team B with `item_qty` and `wh_location`.
+3.  A "Donors.csv" from a global partner with `Amount_USD` and `Provider`.
 
-*   **Without CrisisGrid:** A data officer manually copies, cleans, and deduplicates for 6+ hours.
-*   **With CrisisGrid:** The officer drops all three files into the dashboard. CrisisGrid's AI maps the messy columns to a canonical schema, fixes typos in district names, handles massive files (up to 50MB), and writes clean records to Firestore **in under 60 seconds.**
-
----
-
-## ✨ Key Features & Architecture
-
-*   **AI-Powered Schema Mapping**: Automatically maps inconsistent column names to standardized humanitarian schemas.
-*   **Deep Semantic Cleaning (Vertex AI)**: Fixes spelling errors in geographical regions, normalizes date formats, and strictly enforces numeric precision.
-*   **Enterprise-Grade Scalability**: Processes files up to **50MB** effortlessly. Uses robust data casting to eliminate JSON serialization crashes (e.g., NaN handling).
-*   **Google Cloud Integration**: 
-    *   **Vertex AI (Gemini 3.5 Flash)** for rapid, secure, and highly deterministic data cleaning.
-    *   **Cloud Firestore** for real-time storage and fallback persistence.
-*   **Natural Language Querying**: Ask questions like *"Which district needs the most food kits?"* directly in the dashboard and get AI-generated insights from your Firestore database.
+**Without CrisisGrid:** A data officer manually copies and pastes for 6 hours.
+**With CrisisGrid:** The officer drops all three files into the dashboard. CrisisGrid's AI identifies the data types, maps the messy columns to a canonical schema, fixes typos in district names, and provides a unified dashboard for decision-makers **in under 60 seconds.**
 
 ---
 
-## 🛠️ Technical Setup & Installation
+## ✨ Features
+
+-   **AI-Powered Column Mapping**: Automatically maps messy, inconsistent column names to standardized humanitarian schemas.
+-   **Data Type Detection**: Automatically identifies whether a dataset belongs to Beneficiaries, Inventory, or Donors.
+-   **Intelligent Cleaning Pipeline**: 
+    -   **District Normalization**: Fixes typos and abbreviations in geographical data.
+    -   **Schema Standardization**: Enforces date formats and numeric precision.
+    -   **Deduplication**: Intelligent record matching to remove redundant entries.
+    -   **Null Handling**: Intelligent processing of missing values and placeholder tokens.
+-   **Premium Web Interface**: A high-performance dashboard built with React and Flask.
+-   **Natural Language Querying**: Ask questions like *"Which district needs the most food kits?"* and get AI-generated insights from your Firestore data.
+
+---
+
+## 🛠️ Technical Content
 
 ### Prerequisites
-*   Python 3.8+
-*   Node.js (for the frontend)
-*   **Google Cloud Project** with the Vertex AI API enabled.
-*   **Firebase Service Account** (for Cloud Firestore).
+- Python 3.8+
+- Google Gemini API Key
+- Firebase Service Account
 
-### 1. Clone the Repository
+### Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/stuti-debug/google-solutions.git
+    cd google-solutions
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3.  **Set up environment variables:**
+    ```bash
+    cp .env.example .env
+    # Edit .env and add your GEMINI_API_KEY and Firebase path
+    ```
+
+4.  **Run the backend server:**
+    ```bash
+    python app.py
+    ```
+
+5.  **Access the application:**
+    Open your browser and navigate to `http://localhost:8000` (or `http://localhost:5173` if running the React dev server).
+
+### Command Line Usage
+You can also use the pipeline directly for batch processing:
 ```bash
-git clone https://github.com/stuti-debug/google-solutions.git
-cd google-solutions
+python cleaning_pipeline.py your_messy_file.csv
 ```
 
-### 2. Backend Setup
-```bash
-# Install dependencies
-pip install -r requirements.txt
+## 📊 API Usage
 
-# Copy environment template
-cp .env.example .env
+### Upload and Clean File
+```python
+import requests
+
+# Upload file
+with open('messy_data.csv', 'rb') as f:
+    files = {'file': f}
+    response = requests.post('http://localhost:8000/clean', files=files)
+
+# Get job status
+job_id = response.json()['job_id']
+status = requests.get(f'http://localhost:8000/status/{job_id}')
 ```
-
-**Configure your `.env` file:**
-```env
-# Google Cloud Vertex AI Configuration
-GCP_PROJECT_ID=your_gcp_project_id
-GCP_LOCATION=global
-GEMINI_MODEL=gemini-3.5-flash
-
-# Firebase Configuration
-FIREBASE_PROJECT_ID=your_firebase_project_id
-# Place your firebase-credentials.json in the project root
-```
-
-### 3. Authenticate with Google Cloud (ADC)
-CrisisGrid uses Application Default Credentials for enterprise-grade security. Run:
-```bash
-gcloud auth application-default login
-gcloud config set project your_gcp_project_id
-```
-
-### 4. Start the Application
-```bash
-# Start the Flask Backend
-python app.py
-
-# In a new terminal, start the React Frontend
-cd src
-npm install
-npm run dev
-```
-Navigate to `http://localhost:5173` to access the CrisisGrid dashboard!
-
----
 
 ## 📂 Project Structure
-```text
+```
 crisisgrid/
-├── core/                  # Security, Firestore DB, and Global Config
-├── routes/                # Flask Blueprints (Clean, Query, Upload)
-├── services/              # Vertex AI Mapper and Data Cleaning Logic
-├── src/                   # React Frontend (Vite)
-├── app.py                 # Application Factory
-├── requirements.txt       # Dependencies (google-cloud-aiplatform, pandas, etc.)
-└── .env.example           # Config Template
+|-- core/                  # Security, Firebase, and Global Config
+|-- routes/                # Flask Blueprints (Clean, Query, Data)
+|-- services/              # AI Mapping and Data Logic
+|-- src/                   # React Frontend
+|-- app.py                 # Application Factory
+|-- requirements.txt       # Dependencies
+|-- .env.example           # Config Template
 ```
 
 ---
 
 ## 🔒 Privacy & Security
-*   **Enterprise AI**: By utilizing Google Cloud Vertex AI, NGO data remains strictly private and is **not** used to train public foundation models.
-*   **In-Memory Processing**: Raw dataset cleaning occurs predominantly in-memory to minimize persistent footprints.
-*   **Secure Credentials**: All API keys and Firebase secrets are managed via strict environment variables and Application Default Credentials.
+- **In-Memory Processing**: Data is cleaned in-memory to minimize persistent footprints.
+- **Secure Credentials**: All API keys and Firebase secrets are managed via environment variables.
+
+## 📄 License
+Licensed under the MIT License. See `LICENSE` for details.
 
 ---
-**CrisisGrid** | *Developed for the Google Solution Challenge 2026*
+**CrisisGrid** | *Google Solution Challenge 2026*

@@ -8,11 +8,19 @@ const LandingPage = () => {
     <section id="screen-login" className="screen active fade-in flex-center">
       <div className="landing-container">
         <div className="landing-content">
-          <div className="brand-badge">
+          <div className="brand-badge" style={{ marginBottom: '0.5rem' }}>
             <i className="ph-fill ph-grid-four"></i> CrisisGrid
           </div>
+          
+          <div className="sdg-badges" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.3rem 0.6rem', borderRadius: '4px', background: 'rgba(0, 150, 136, 0.1)', color: 'var(--clr-primary)' }}>UN SDG 11: Sustainable Cities</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.3rem 0.6rem', borderRadius: '4px', background: 'rgba(0, 150, 136, 0.1)', color: 'var(--clr-primary)' }}>UN SDG 13: Climate Action</span>
+          </div>
+
           <h1 className="hero-headline">Turn your messy NGO data into actionable insights in seconds.</h1>
           <p className="hero-subtext">CrisisGrid helps disaster relief NGOs clean, understand, and act on their data — no technical skills needed.</p>
+          
+
           
           <div className="auth-actions">
             <button className="btn btn-google full-width" onClick={signInWithGoogle} disabled={loading}>
@@ -54,8 +62,15 @@ const LandingPage = () => {
         </div>
       </div>
       
-      <div className="landing-footer">
-        <p><strong>CrisisGrid</strong> — Where every crisis meets clarity.</p>
+      <div className="landing-footer" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '0 4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--clr-text-muted)', fontWeight: 600 }}>Powered by Google</span>
+          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', opacity: 0.8 }}>
+            <span style={{ fontSize: '1.3rem', display: 'flex', alignItems: 'center', color: 'var(--clr-text)' }} title="Gemini API"><i className="ph-fill ph-sparkle" style={{ color: '#4285F4' }}></i></span>
+            <span style={{ fontSize: '1.3rem', display: 'flex', alignItems: 'center', color: 'var(--clr-text)' }} title="Firebase"><i className="ph-fill ph-database" style={{ color: '#FFCA28' }}></i></span>
+            <span style={{ fontSize: '1.3rem', display: 'flex', alignItems: 'center', color: 'var(--clr-text)' }} title="React"><i className="ph-fill ph-atom" style={{ color: '#61DAFB' }}></i></span>
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -65,14 +65,22 @@ class SessionStore:
                 CREATE TABLE IF NOT EXISTS session_rows (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     session_id TEXT NOT NULL,
+                    file_type TEXT,
                     row_index INTEGER NOT NULL,
                     row_json TEXT NOT NULL,
                     FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
                 )
                 """
             )
+            row_columns = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(session_rows)").fetchall()
+            }
+            if "file_type" not in row_columns:
+                conn.execute("ALTER TABLE session_rows ADD COLUMN file_type TEXT")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_rows_session ON session_rows(session_id, row_index)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_session_rows_type ON session_rows(session_id, file_type, row_index)")
 
     def create_job(self, filename: str = "upload") -> str:
         job_id = uuid.uuid4().hex
@@ -147,44 +155,100 @@ class SessionStore:
         file_type: str,
         records: List[Dict[str, Any]],
         summary: Dict[str, Any],
-    ) -> str:
+        ) -> str:
         session_id = session_id or uuid.uuid4().hex
-        df = pd.DataFrame(records or [])
-        columns = list(df.columns)
-        dtypes = {col: str(df[col].dtype) for col in columns}
-        profile = self._build_profile(df)
+        incoming_records = records or []
 
         now = self._now()
         with self._connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO sessions(
-                    session_id, file_type, record_count, columns_json, dtypes_json,
-                    profile_json, summary_json, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    session_id,
-                    file_type,
-                    int(len(df)),
-                    json.dumps(columns, ensure_ascii=False),
-                    json.dumps(dtypes, ensure_ascii=False),
-                    json.dumps(profile, ensure_ascii=False),
-                    json.dumps(summary, ensure_ascii=False),
-                    now,
-                ),
-            )
+            existing = conn.execute(
+                "SELECT * FROM sessions WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            if not existing:
+                conn.execute(
+                    """
+                    INSERT INTO sessions(
+                        session_id, file_type, record_count, columns_json, dtypes_json,
+                        profile_json, summary_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        session_id,
+                        file_type or "unknown",
+                        0,
+                        "[]",
+                        "{}",
+                        json.dumps(self._build_profile(pd.DataFrame()), ensure_ascii=False),
+                        json.dumps({}, ensure_ascii=False),
+                        now,
+                    ),
+                )
+                existing = conn.execute(
+                    "SELECT * FROM sessions WHERE session_id = ?",
+                    (session_id,),
+                ).fetchone()
 
-            if records:
+            current_max = conn.execute(
+                "SELECT COALESCE(MAX(row_index), -1) AS max_idx FROM session_rows WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()["max_idx"]
+
+            if incoming_records:
                 rows_to_insert = [
-                    (session_id, idx, json.dumps(row, ensure_ascii=False))
-                    for idx, row in enumerate(records)
+                    (
+                        session_id,
+                        file_type,
+                        int(current_max) + idx + 1,
+                        json.dumps(row, ensure_ascii=False),
+                    )
+                    for idx, row in enumerate(incoming_records)
                 ]
                 conn.executemany(
-                    "INSERT INTO session_rows(session_id, row_index, row_json) VALUES (?, ?, ?)",
+                    "INSERT INTO session_rows(session_id, file_type, row_index, row_json) VALUES (?, ?, ?, ?)",
                     rows_to_insert,
                 )
 
+            all_rows = conn.execute(
+                """
+                SELECT file_type, row_json FROM session_rows
+                WHERE session_id = ?
+                ORDER BY row_index ASC
+                """,
+                (session_id,),
+            ).fetchall()
+            all_records = [json.loads(r["row_json"]) for r in all_rows]
+            file_types = sorted({(r["file_type"] or file_type or "unknown") for r in all_rows}) or [file_type or "unknown"]
+            df = pd.DataFrame(all_records)
+            columns = list(df.columns)
+            dtypes = {col: str(df[col].dtype) for col in columns}
+            profile = self._build_profile(df)
+            combined_summary = self._merge_summary(
+                json.loads(existing["summary_json"]) if existing and existing["summary_json"] else {},
+                summary or {},
+            )
+            combined_summary["fileTypes"] = file_types
+            combined_summary["recordCountsByType"] = self._count_rows_by_type(conn, session_id)
+            session_file_type = file_types[0] if len(file_types) == 1 else "multiple"
+
+            if existing:
+                conn.execute(
+                    """
+                    UPDATE sessions
+                    SET file_type = ?, record_count = ?, columns_json = ?, dtypes_json = ?,
+                        profile_json = ?, summary_json = ?
+                    WHERE session_id = ?
+                    """,
+                    (
+                        session_file_type,
+                        int(len(df)),
+                        json.dumps(columns, ensure_ascii=False),
+                        json.dumps(dtypes, ensure_ascii=False),
+                        json.dumps(profile, ensure_ascii=False),
+                        json.dumps(combined_summary, ensure_ascii=False),
+                        session_id,
+                    ),
+                )
         return session_id
 
     def get_session_meta(self, session_id: str) -> Optional[Dict[str, Any]]:
@@ -202,59 +266,79 @@ class SessionStore:
             data.pop(key, None)
         return data
 
-    def get_session_page(self, session_id: str, page: int, limit: int) -> Dict[str, Any]:
+    def get_session_page(
+        self,
+        session_id: str,
+        page: int,
+        limit: int,
+        file_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
         safe_page = max(1, int(page))
         safe_limit = max(1, min(500, int(limit)))
         offset = (safe_page - 1) * safe_limit
+        normalized_type = (file_type or "").lower().strip() or None
+
+        where_clause = "WHERE session_id = ?"
+        params: List[Any] = [session_id]
+        if normalized_type and normalized_type != "all":
+            where_clause += " AND file_type = ?"
+            params.append(normalized_type)
 
         with self._connect() as conn:
             total = conn.execute(
-                "SELECT COUNT(*) AS c FROM session_rows WHERE session_id = ?",
-                (session_id,),
+                f"SELECT COUNT(*) AS c FROM session_rows {where_clause}",
+                params,
             ).fetchone()["c"]
             rows = conn.execute(
-                """
-                SELECT row_json FROM session_rows
-                WHERE session_id = ?
+                f"""
+                SELECT file_type, row_json FROM session_rows
+                {where_clause}
                 ORDER BY row_index ASC
                 LIMIT ? OFFSET ?
                 """,
-                (session_id, safe_limit, offset),
+                [*params, safe_limit, offset],
             ).fetchall()
-
-        import math
-        def _clean_row(r_json: str) -> Dict[str, Any]:
-            row = json.loads(r_json)
-            for k, v in row.items():
-                if isinstance(v, float) and math.isnan(v):
-                    row[k] = None
-            return row
 
         return {
             "page": safe_page,
             "limit": safe_limit,
             "total_records": int(total),
-            "rows": [_clean_row(r["row_json"]) for r in rows],
+            "file_type": normalized_type or "all",
+            "rows": [
+                {
+                    **json.loads(r["row_json"]),
+                    "_file_type": r["file_type"],
+                }
+                for r in rows
+            ],
         }
 
-    def get_session_rows(self, session_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
-        query = "SELECT row_json FROM session_rows WHERE session_id = ? ORDER BY row_index ASC"
-        params: Tuple[Any, ...] = (session_id,)
+    def get_session_rows(
+        self,
+        session_id: str,
+        limit: Optional[int] = None,
+        file_type: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        query = "SELECT file_type, row_json FROM session_rows WHERE session_id = ?"
+        params_list: List[Any] = [session_id]
+        normalized_type = (file_type or "").lower().strip()
+        if normalized_type and normalized_type != "all":
+            query += " AND file_type = ?"
+            params_list.append(normalized_type)
+        query += " ORDER BY row_index ASC"
         if limit is not None:
             query += " LIMIT ?"
-            params = (session_id, int(limit))
+            params_list.append(int(limit))
 
         with self._connect() as conn:
-            rows = conn.execute(query, params).fetchall()
-        import math
-        def _clean_row(r_json: str) -> Dict[str, Any]:
-            row = json.loads(r_json)
-            for k, v in row.items():
-                if isinstance(v, float) and math.isnan(v):
-                    row[k] = None
-            return row
-
-        return [_clean_row(r["row_json"]) for r in rows]
+            rows = conn.execute(query, tuple(params_list)).fetchall()
+        return [
+            {
+                **json.loads(r["row_json"]),
+                "_file_type": r["file_type"],
+            }
+            for r in rows
+        ]
 
     def set_insights(self, session_id: str, insights: List[str]) -> None:
         with self._connect() as conn:
@@ -362,6 +446,33 @@ class SessionStore:
         profile["topCategoricalValues"] = top_values
 
         return profile
+
+    def _count_rows_by_type(self, conn: sqlite3.Connection, session_id: str) -> Dict[str, int]:
+        rows = conn.execute(
+            """
+            SELECT COALESCE(file_type, 'unknown') AS file_type, COUNT(*) AS count
+            FROM session_rows
+            WHERE session_id = ?
+            GROUP BY COALESCE(file_type, 'unknown')
+            """,
+            (session_id,),
+        ).fetchall()
+        return {row["file_type"]: int(row["count"]) for row in rows}
+
+    def _merge_summary(self, current: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
+        merged = dict(current or {})
+        for key in ["totalFixed", "removedDuplicates", "droppedInvalidRows"]:
+            merged[key] = int(merged.get(key) or 0) + int((incoming or {}).get(key) or 0)
+
+        current_logs = merged.get("error_logs") or []
+        incoming_logs = (incoming or {}).get("error_logs") or []
+        merged["error_logs"] = [*current_logs, *incoming_logs]
+        merged["message"] = (
+            f"Fixed {merged.get('totalFixed', 0)} errors, "
+            f"removed {merged.get('removedDuplicates', 0)} duplicates, "
+            f"dropped {merged.get('droppedInvalidRows', 0)} invalid rows."
+        )
+        return merged
 
     @staticmethod
     def _clean_scalar(value: Any) -> Any:

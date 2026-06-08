@@ -1,34 +1,33 @@
 #!/usr/bin/env python3
-"""Test script to verify Vertex AI connection works"""
+"""Test script to verify new API key works"""
 
 import os
 from dotenv import load_dotenv
 from services.ai_mapper import GeminiAIMapper
 
-def test_vertex_ai():
+def test_api_key():
     load_dotenv()
-    project_id = os.getenv("GCP_PROJECT_ID")
-    location = os.getenv("GCP_LOCATION", "us-central1")
-
-    if not project_id:
-        print("ERROR: GCP_PROJECT_ID not found in .env file")
+    api_key = os.getenv("GEMINI_API_KEY")
+    
+    if not api_key:
+        print("ERROR: GEMINI_API_KEY not found in .env file")
         return False
-
-    print(f"Testing Vertex AI with project: {project_id}, location: {location}")
-
+    
+    print(f"Testing API key: {api_key[:8]}...")
+    
     try:
-        mapper = GeminiAIMapper(gcp_project_id=project_id, gcp_location=location)
+        mapper = GeminiAIMapper(gemini_api_key=api_key)
         # Simple test request
         test_payload = {
             "task": "test",
             "message": "Hello, this is a test"
         }
         response = mapper.request_json(test_payload)
-        print("SUCCESS: Vertex AI connection is working!")
+        print("SUCCESS: API key is working!")
         return True
     except Exception as e:
-        print(f"ERROR: Vertex AI test failed - {e}")
+        print(f"ERROR: API key test failed - {e}")
         return False
 
 if __name__ == "__main__":
-    test_vertex_ai()
+    test_api_key()

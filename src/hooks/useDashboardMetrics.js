@@ -15,6 +15,19 @@ export const useDashboardMetrics = () => {
   const [insights, setInsights] = useState([]);
   const [loadingInsights, setLoadingInsights] = useState(true);
   const [metrics, setMetrics] = useState(EMPTY_METRICS);
+  const [districts, setDistricts] = useState([]);
+
+  const extractDistricts = (rows) => {
+    if (!Array.isArray(rows)) return [];
+    const counts = {};
+    rows.forEach(r => {
+      const name = r.district || r.District || r.location || r.Location || r.city || r.City || r.address || r.Address;
+      if (name && typeof name === 'string') {
+        counts[name] = (counts[name] || 0) + 1;
+      }
+    });
+    return Object.entries(counts).map(([name, count]) => ({ name, count }));
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -25,7 +38,8 @@ export const useDashboardMetrics = () => {
   useEffect(() => {
     if (!user) return;
 
-    if (cleanedData && cleanedData.fileType === 'multiple') {
+    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
+    if (cleanedData) {
       setMetrics({
         recordCount: cleanedData.recordCount || 0,
         totalFixed: cleanedData.summary?.totalFixed || 0,
@@ -33,70 +47,30 @@ export const useDashboardMetrics = () => {
         droppedInvalidRows: cleanedData.summary?.droppedInvalidRows || 0,
         errorLogs: cleanedData.summary?.error_logs || [],
       });
+      setDistricts(extractDistricts(cleanedData.cleanedDocuments || []));
       return;
     }
 
-    let currentSessionMap = sessionData;
-    if (!currentSessionMap) {
-      try {
-        const raw = localStorage.getItem('crisisgrid_session');
-        currentSessionMap = raw?.startsWith('{') ? JSON.parse(raw) : raw;
-      } catch (e) {
-        currentSessionMap = null;
-      }
-    }
-
-    if (!currentSessionMap) {
+    if (!sessionId) {
       setMetrics(EMPTY_METRICS);
       return;
     }
 
     let cancelled = false;
-
-    const fetchAllMetrics = async () => {
-      let sessionIds = [];
-      if (typeof currentSessionMap === 'object') {
-        sessionIds = Object.values(currentSessionMap);
-      } else {
-        sessionIds = [currentSessionMap];
-      }
-
-      let totalRecordCount = 0;
-      let totalFixed = 0;
-      let totalDuplicates = 0;
-      let totalDropped = 0;
-      const allLogs = [];
-
-      await Promise.all(sessionIds.map(async (sId) => {
-        try {
-          const res = await fetch(`${API_BASE_URL}/data/${sId}?page=1&limit=1`);
-          if (res.ok) {
-            const data = await res.json();
-            totalRecordCount += data.total_records || 0;
-            totalFixed += data.summary?.totalFixed || 0;
-            totalDuplicates += data.summary?.removedDuplicates || 0;
-            totalDropped += data.summary?.droppedInvalidRows || 0;
-            if (data.summary?.error_logs) {
-              allLogs.push(...data.summary.error_logs);
-            }
-          }
-        } catch(err) {
-          console.error("Failed to fetch metrics for", sId, err);
-        }
-      }));
-
-      if (!cancelled) {
+    fetch(`${API_BASE_URL}/data/${sessionId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
         setMetrics({
-          recordCount: totalRecordCount,
-          totalFixed: totalFixed,
-          removedDuplicates: totalDuplicates,
-          droppedInvalidRows: totalDropped,
-          errorLogs: allLogs,
+          recordCount: data.total_records || 0,
+          totalFixed: data.summary?.totalFixed || 0,
+          removedDuplicates: data.summary?.removedDuplicates || 0,
+          droppedInvalidRows: data.summary?.droppedInvalidRows || 0,
+          errorLogs: data.summary?.error_logs || [],
         });
-      }
-    };
-
-    fetchAllMetrics();
+        setDistricts(extractDistricts(data.rows || []));
+      })
+      .catch((err) => console.error('Failed to restore dashboard metrics', err));
 
     return () => {
       cancelled = true;
@@ -109,26 +83,10 @@ export const useDashboardMetrics = () => {
       return;
     }
 
-    let currentSessionMap = sessionData;
-    if (!currentSessionMap) {
-      try {
-        const raw = localStorage.getItem('crisisgrid_session');
-        currentSessionMap = raw?.startsWith('{') ? JSON.parse(raw) : raw;
-      } catch (e) {
-        currentSessionMap = null;
-      }
-    }
-
-    if (!currentSessionMap) {
+    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
+    if (!sessionId) {
       setLoadingInsights(false);
       return;
-    }
-
-    let sessionIds = [];
-    if (typeof currentSessionMap === 'object') {
-      sessionIds = Object.values(currentSessionMap);
-    } else {
-      sessionIds = [currentSessionMap];
     }
 
     let cancelled = false;
@@ -136,11 +94,7 @@ export const useDashboardMetrics = () => {
 
     const fetchInsights = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/insights`, {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({ session_ids: sessionIds })
-        });
+        const res = await fetch(`${API_BASE_URL}/insights/${sessionId}`);
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data.insights)) {
@@ -175,6 +129,7 @@ export const useDashboardMetrics = () => {
     floatingQuery,
     setFloatingQuery,
     openNlqIfReady,
+    districts,
   };
 };
 

@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify
 from firebase_admin import firestore
 
 from core.firebase import get_db
-from core.security import validate_job_id, validate_file_extension
+from core.security import validate_job_id, validate_file_extension, validate_session_id
 from core.app_globals import store, CLEAN_JOB_EXECUTOR, PIPELINE, limiter
 
 clean_bp = Blueprint('clean', __name__)
@@ -89,8 +89,8 @@ def _write_records_to_firestore(
             batch.set(doc_ref, payload)
         batch.commit()
 
-def _run_clean_job(job_id: str, filename: str, file_bytes: bytes) -> None:
-    session_id = uuid.uuid4().hex
+def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Optional[str] = None) -> None:
+    session_id = session_id or uuid.uuid4().hex
     try:
         _update_firestore_session_doc(
             session_id=session_id,
@@ -145,6 +145,11 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes) -> None:
             records=cleaned_docs,
             summary=summary,
         )
+        session_meta = store.get_session_meta(session_id) or {}
+        aggregate_summary = session_meta.get("summary") or summary
+        aggregate_record_count = int(session_meta.get("record_count") or len(cleaned_docs))
+        aggregate_columns = session_meta.get("columns") or (list(cleaned_docs[0].keys()) if cleaned_docs else [])
+        aggregate_file_type = session_meta.get("file_type") or file_type
 
         store.update_job(
             job_id,
@@ -152,23 +157,26 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes) -> None:
             progress=100,
             message="Processing complete",
             session_id=session_id,
-            summary=summary,
+            summary={
+                **summary,
+                "fileType": file_type,
+                "recordCount": len(cleaned_docs),
+                "sessionSummary": aggregate_summary,
+                "sessionRecordCount": aggregate_record_count,
+            },
         )
 
         _write_records_to_firestore(session_id=session_id, file_type=file_type, records=cleaned_docs)
-
-        # Extract column names for Firestore metadata
-        columns = list(cleaned_docs[0].keys()) if cleaned_docs else []
 
         _update_firestore_session_doc(
             session_id=session_id,
             status="completed",
             progress=100,
             message="Processing complete",
-            file_type=file_type,
-            summary=summary,
-            record_count=len(cleaned_docs),
-            columns=columns,
+            file_type=aggregate_file_type,
+            summary=aggregate_summary,
+            record_count=aggregate_record_count,
+            columns=aggregate_columns,
         )
     except Exception as exc:
         store.update_job(
@@ -198,27 +206,24 @@ def clean_upload():
 
         filename = uploaded.filename or "upload"
         validate_file_extension(filename)
+        session_id = (request.form.get("session_id") or "").strip() or None
+        if session_id:
+            validate_session_id(session_id)
 
         raw = uploaded.read()
         if not raw:
             return jsonify({"code": "EMPTY_UPLOAD", "message": "Uploaded file is empty."}), 400
         
         # Max content length is handled by Flask config, but we can double check
-        if len(raw) > (50 * 1024 * 1024):
-            return jsonify({"code": "FILE_TOO_LARGE", "message": "File exceeds 50MB limit."}), 413
+        if len(raw) > (10 * 1024 * 1024):
+            return jsonify({"code": "FILE_TOO_LARGE", "message": "File exceeds 10MB limit."}), 413
 
         job_id = store.create_job(filename=filename)
-        CLEAN_JOB_EXECUTOR.submit(_run_clean_job, job_id, filename, raw)
-        return jsonify({"job_id": job_id, "status": "processing"})
+        CLEAN_JOB_EXECUTOR.submit(_run_clean_job, job_id, filename, raw, session_id)
+        return jsonify({"job_id": job_id, "session_id": session_id, "status": "processing"})
     except ValueError as exc:
         return jsonify({"code": "INVALID_FILE_TYPE", "message": str(exc)}), 400
-    except Exception as exc:
-        from werkzeug.exceptions import HTTPException
-        if isinstance(exc, HTTPException):
-            return jsonify({"code": "HTTP_ERROR", "message": str(exc.description or exc.name)}), exc.code
-        
-        import traceback
-        traceback.print_exc()
+    except Exception:
         return jsonify({"code": "INTERNAL_ERROR", "message": "An unexpected error occurred during upload."}), 500
 
 @clean_bp.route('/status/<job_id>', methods=['GET'])
@@ -241,6 +246,8 @@ def get_job_status(job_id: str):
     if job.get("status") == "completed":
         response["session_id"] = job.get("session_id")
         response["summary"] = job.get("summary")
+        response["fileType"] = (job.get("summary") or {}).get("fileType")
+        response["recordCount"] = (job.get("summary") or {}).get("recordCount")
     if job.get("status") == "failed":
         response["error"] = job.get("error")
 

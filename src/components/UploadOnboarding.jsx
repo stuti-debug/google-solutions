@@ -162,7 +162,7 @@ const UploadOnboarding = () => {
             </div>
             <p className="text-muted text-center mt-4" style={{ fontSize: '0.9rem' }}>You can skip any category and upload it later.</p>
             <div className="alert-box info-light mt-4 p-4 text-center" style={{ borderRadius: '8px', fontSize: '0.85rem' }}>
-               <strong>MVP Notice:</strong> Files are processed sequentially. Future metrics will be bound to a single persistent session.
+              <strong>Workspace Configured:</strong> Files are processed securely and linked to your current crisis workspace.
             </div>
 
             <div className="actions right-align mt-6">

@@ -12,6 +12,12 @@ from core.app_globals import limiter
 from routes.clean import clean_bp
 from routes.query import query_bp
 from routes.data import data_bp
+from routes.match import match_bp
+from routes.priority import priority_bp
+from routes.sitrep import sitrep_bp
+from routes.alerts import alerts_bp
+from routes.forecast import forecast_bp
+from routes.reports import reports_bp
 
 def create_app():
     # 1. Load environment variables
@@ -44,6 +50,12 @@ def create_app():
     app.register_blueprint(clean_bp)
     app.register_blueprint(query_bp)
     app.register_blueprint(data_bp)
+    app.register_blueprint(match_bp)
+    app.register_blueprint(priority_bp)
+    app.register_blueprint(sitrep_bp)
+    app.register_blueprint(alerts_bp)
+    app.register_blueprint(forecast_bp)
+    app.register_blueprint(reports_bp)
 
     # 7. Global Middlewares
     app.after_request(security_headers_middleware)
