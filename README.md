@@ -47,12 +47,7 @@ Imagine an NGO responding to a major flood. They receive:
     -   **Schema Standardization**: Enforces date formats and numeric precision.
     -   **Deduplication**: Intelligent record matching to remove redundant entries.
     -   **Null Handling**: Intelligent processing of missing values and placeholder tokens.
--   **Interactive Geospatial Heatmap**: Plots camp locations on Google Maps, styled with color-coded pins reflecting camp urgency scores (Critical, High, Medium, Low).
--   **AI-Driven Supply Dispatch Matching**: Greedy allocation algorithm pairing donor donations and warehouse stock directly with camps demanding water, food, and medical kits.
--   **Humanitarian SitRep & Report Generator**: Generates comprehensive Situation Reports, Gap Analysis tables, inventory ledgers, and data quality audits, with support for copy-paste and PDF printing.
--   **Interactive BurnDown Forecasting Chart**: Recharts-powered visualization projecting supply depletion rates and highlighting remaining stock lifespans (days of coverage).
--   **Dynamic Priority Scoring**: Dynamic algorithms evaluating population sizes, critical need requests (water/medical alerts), and pending queues to assign camp priority scores.
--   **Premium Web Interface**: A high-performance dashboard built with React and Flask supporting Dark and Light theme states.
+-   **Premium Web Interface**: A high-performance dashboard built with React and Flask.
 -   **Natural Language Querying**: Ask questions like *"Which district needs the most food kits?"* and get AI-generated insights from your Firestore data.
 
 ---
@@ -68,7 +63,7 @@ Imagine an NGO responding to a major flood. They receive:
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/ANSH0000007/google-solutions.git
+    git clone https://github.com/stuti-debug/google-solutions.git
     cd google-solutions
     ```
 
