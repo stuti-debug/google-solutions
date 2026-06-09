@@ -8,17 +8,26 @@ const LandingPage = () => {
     <section id="screen-login" className="screen active fade-in flex-center">
       <div className="landing-container">
         <div className="landing-content">
-          <div className="brand-badge" style={{ marginBottom: '0.5rem' }}>
+          <div className="brand-badge">
             <i className="ph-fill ph-grid-four"></i> CrisisGrid
-          </div>
-          
-          <div className="sdg-badges" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.3rem 0.6rem', borderRadius: '4px', background: 'rgba(0, 150, 136, 0.1)', color: 'var(--clr-primary)' }}>UN SDG 11: Sustainable Cities</span>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.3rem 0.6rem', borderRadius: '4px', background: 'rgba(0, 150, 136, 0.1)', color: 'var(--clr-primary)' }}>UN SDG 13: Climate Action</span>
           </div>
 
           <h1 className="hero-headline">Turn your messy NGO data into actionable insights in seconds.</h1>
           <p className="hero-subtext">CrisisGrid helps disaster relief NGOs clean, understand, and act on their data — no technical skills needed.</p>
+          
+          <div className="sdg-section">
+            <div className="sdg-title">Supporting UN Sustainable Development Goals</div>
+            <div className="sdg-badges-row">
+              <div className="sdg-badge-custom sdg-11">
+                <span className="sdg-dot"></span>
+                UN SDG 11: Sustainable Cities
+              </div>
+              <div className="sdg-badge-custom sdg-13">
+                <span className="sdg-dot"></span>
+                UN SDG 13: Climate Action
+              </div>
+            </div>
+          </div>
           
 
           

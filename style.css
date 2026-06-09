@@ -334,6 +334,57 @@ nav {
   margin-bottom: 2rem;
 }
 
+/* SDG Badge Section styling */
+.sdg-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.sdg-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--clr-text-muted);
+}
+
+.sdg-badges-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.sdg-badge-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--clr-text);
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--trans-fast);
+}
+
+.sdg-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sdg-badge-custom.sdg-11 .sdg-dot {
+  background: #F99D26; /* Official SDG 11 Orange */
+}
+
+.sdg-badge-custom.sdg-13 .sdg-dot {
+  background: #3F7E44; /* Official SDG 13 Green */
+}
+
 .hero-headline {
   font-size: 3.5rem;
   line-height: 1.1;
