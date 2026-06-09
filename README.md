@@ -13,8 +13,8 @@ Manually cleaning and unifying this data can take days—days that the most vuln
 ## 🌍 UN Sustainable Development Goals (SDGs)
 CrisisGrid is built to address the core objectives of the Google Solution Challenge by focusing on:
 
-*   **SDG 1: No Poverty** – By ensuring that aid reaches the right people without administrative delay, we help prevent vulnerable populations from falling deeper into poverty during crises.
-*   **SDG 11: Sustainable Cities and Communities** – We enhance urban resilience by providing city planners and disaster response teams with accurate, real-time data to manage resources and infrastructure during emergencies.
+*   **SDG 11: Sustainable Cities and Communities** – Enhancing urban resilience and coordination. By providing emergency response agencies and NGOs with clean, unified, and geolocated data, CrisisGrid helps planners manage supply logistics and allocate resources efficiently to critical zones during crises.
+*   **SDG 13: Climate Action** – Combating the impacts of climate-induced disasters. Natural disasters (floods, cyclones, heatwaves) are increasing in frequency and severity due to climate change. CrisisGrid enables rapid response by instantly sanitizing disparate relief field lists, ensuring fast and accurate aid dispatch.
 
 ## 🚀 Live Demo
 **Check out the live application here:** [Live Demo URL Placeholder](https://crisisgrid-demo.vercel.app)
