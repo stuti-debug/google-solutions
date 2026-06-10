@@ -172,22 +172,22 @@ const MapView = () => {
 
   return (
     <section id="screen-map" className="screen active with-nav fade-in dashboard-premium">
-      <div className="dashboard-wrapper header-offset" style={{ maxWidth: '1600px', display: 'flex', flexDirection: 'column', gap: '1.5rem', height: 'calc(100vh - 80px)' }}>
+      <div className="dashboard-wrapper header-offset map-dashboard-wrapper">
         
-        <div className="flex justify-between items-center" style={{ padding: '0 1rem', display: 'flex', width: '100%', justifyContent: 'space-between' }}>
+        <div className="page-header">
           <div>
             <h2 style={{ fontSize: '2.2rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--clr-text)' }}>Geospatial Heatmap</h2>
             <p style={{ color: 'var(--clr-text-muted)', marginTop: '0.2rem', fontSize: '0.95rem' }}>Live tracking of priority crisis zones and resource logistics.</p>
           </div>
-          <button className="btn primary" onClick={fetchPriorities} disabled={loadingData} style={{ boxShadow: '0 8px 16px rgba(13, 115, 119, 0.2)', marginLeft: 'auto' }}>
+          <button className="btn primary" onClick={fetchPriorities} disabled={loadingData} style={{ boxShadow: '0 8px 16px rgba(13, 115, 119, 0.2)' }}>
              <i className={`ph-fill ph-arrows-clockwise ${loadingData ? 'spin' : ''}`}></i> Sync Map Data
           </button>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', gap: '1.5rem', minHeight: 0, marginTop: '10px' }}>
+        <div className="map-view-main-layout">
           
           {/* Left Sidebar: Zone List */}
-          <div style={{ width: '450px', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', paddingRight: '0.5rem', overflowY: 'auto' }}>
+          <div className="map-sidebar">
             {loadingData && priorities.length === 0 ? (
               <>
                 <div className="insight-card-skeleton" style={{ height: '110px', borderRadius: '16px', width: '100%', flexShrink: 0 }}></div>
@@ -239,7 +239,7 @@ const MapView = () => {
           </div>
 
           {/* Right Area: Map */}
-          <div style={{ flex: 1, background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', borderRadius: '24px', padding: '0.5rem', boxShadow: 'var(--shadow-md)', position: 'relative', overflow: 'hidden' }}>
+          <div className="map-canvas-container">
             <div style={{ borderRadius: '20px', overflow: 'hidden', height: '100%', width: '100%' }}>
               <GoogleMap
                 mapContainerStyle={containerStyle}
@@ -267,27 +267,7 @@ const MapView = () => {
 
             {/* Custom Premium Info Card Overlay */}
             {activeMarker && (
-              <div 
-                className="fade-in"
-                style={{
-                  position: 'absolute',
-                  top: '1.5rem',
-                  right: '1.5rem',
-                  background: 'var(--glass-bg)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: '1px solid var(--glass-border)',
-                  borderRadius: '16px',
-                  padding: '1.2rem',
-                  width: '320px',
-                  boxShadow: 'var(--shadow-lg)',
-                  zIndex: 10,
-                  color: 'var(--clr-text)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.6rem'
-                }}
-              >
+              <div className="fade-in map-info-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--clr-text)' }}>{activeMarker.location}</h4>
                   <button 
@@ -338,13 +318,13 @@ const MapView = () => {
             )}
 
             {/* Map Legend overlay */}
-            <div style={{ position: 'absolute', bottom: '1.5rem', left: '1.5rem', background: 'var(--glass-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '1rem', borderRadius: '16px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-md)' }}>
+            <div className="map-legend-overlay">
                <h5 style={{ margin: '0 0 0.8rem 0', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--clr-text)' }}>Urgency Legend</h5>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem', color: 'var(--clr-text-muted)', fontWeight: 500 }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }}></span> Critical (90+)</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F97316', boxShadow: '0 0 0 3px rgba(249, 115, 22, 0.2)' }}></span> High (75-89)</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EAB308', boxShadow: '0 0 0 3px rgba(234, 179, 8, 0.2)' }}></span> Medium (60-74)</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.2)' }}></span> Low (&lt;60)</div>
+               <div className="map-legend-items">
+                 <div className="map-legend-item"><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444', boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }}></span> Critical (90+)</div>
+                 <div className="map-legend-item"><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F97316', boxShadow: '0 0 0 3px rgba(249, 115, 22, 0.2)' }}></span> High (75-89)</div>
+                 <div className="map-legend-item"><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#EAB308', boxShadow: '0 0 0 3px rgba(234, 179, 8, 0.2)' }}></span> Medium (60-74)</div>
+                 <div className="map-legend-item"><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.2)' }}></span> Low (&lt;60)</div>
                </div>
             </div>
           </div>

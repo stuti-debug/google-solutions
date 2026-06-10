@@ -4,7 +4,7 @@ import ShareButton from './ShareButton';
 import { formatPriorityZone } from '../utils/shareFormatter';
 
 const PriorityScores = () => {
-  const { API_BASE_URL, sessionData, setMapFocusPriorityId, navigate } = useAppContext();
+  const { API_BASE_URL, sessionData, navigate } = useAppContext();
   const [priorities, setPriorities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -47,8 +47,9 @@ const PriorityScores = () => {
 
   const handleCardClick = (id) => {
     try {
-      setMapFocusPriorityId(id);
-      navigate('screen-map');
+      if (navigate) {
+        navigate('screen-map');
+      }
     } catch (err) {
       console.error(err);
     }
@@ -151,11 +152,11 @@ const PriorityScores = () => {
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '0' }} />
 
               {/* Reasoning */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+              <div className="priority-reasoning-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--clr-text-muted)', lineHeight: 1.4 }}>
                   <strong>{item.urgency_level}:</strong> {item.reasoning}
                 </div>
-                <div onClick={(e) => e.stopPropagation()}>
+                <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
                   <ShareButton variant="inline" getText={() => formatPriorityZone(item)} />
                 </div>
               </div>

@@ -156,7 +156,7 @@ const QueryChat = () => {
   };
 
   return (
-    <section id="screen-nlq" className="screen active with-nav header-offset fade-in">
+    <main id="screen-nlq" className="screen active with-nav header-offset fade-in" aria-label="AI Query Chat">
        <div className="nlq-container chat-layout">
           <div className={messages.length === 0 ? "nlq-header text-center" : "nlq-header"} style={{ display: 'flex', justifyContent: messages.length === 0 ? 'center' : 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem', width: '100%' }}>
             <h2 className="nlq-title" style={{ margin: 0, width: messages.length === 0 ? '100%' : 'auto' }}>Ask anything about your data.</h2>
@@ -168,14 +168,15 @@ const QueryChat = () => {
                   toast.success('Conversation cleared!');
                 }}
                 style={{ borderRadius: '20px', padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                aria-label="Start new conversation"
               >
-                <i className="ph ph-trash"></i> New Conversation
+                <i className="ph ph-trash" aria-hidden="true"></i> New Conversation
               </button>
             )}
           </div>
 
           <div className="search-box prominent-search">
-            <i className="ph-fill ph-sparkle spark-icon"></i>
+            <i className="ph-fill ph-sparkle spark-icon" aria-hidden="true"></i>
             <input 
               type="text" 
               id="nlq-input" 
@@ -184,6 +185,7 @@ const QueryChat = () => {
               maxLength={MAX_QUESTION_LENGTH}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuery(); }}
+              aria-label="Ask anything about your data"
             />
             {speechSupported && (
               <div className="voice-controls">
@@ -199,30 +201,30 @@ const QueryChat = () => {
                   onClick={listening ? stopListening : startListening}
                   title={listening ? 'Stop listening' : 'Voice input'}
                 >
-                  <i className={listening ? 'ph-fill ph-stop-circle' : 'ph ph-microphone'}></i>
+                  <i className={listening ? 'ph-fill ph-stop-circle' : 'ph ph-microphone'} aria-hidden="true"></i>
                 </button>
               </div>
             )}
-            <button className="btn primary send-btn" onClick={() => handleQuery()} disabled={queryLoading}>
-              {queryLoading ? <i className="ph ph-spinner ph-spin"></i> : <i className="ph ph-arrow-right"></i>}
+            <button className="btn primary send-btn" onClick={() => handleQuery()} disabled={queryLoading} aria-label="Send query">
+              {queryLoading ? <i className="ph ph-spinner ph-spin" aria-hidden="true"></i> : <i className="ph ph-arrow-right" aria-hidden="true"></i>}
             </button>
           </div>
 
           {messages.length === 0 && (
             <div className="suggestions quick-questions" id="nlq-suggestions">
-              <span className="suggestion-chip" onClick={() => handleSuggestionClick("Which camps are running low on supplies?")}>
+              <button className="suggestion-chip" onClick={() => handleSuggestionClick("Which camps are running low on supplies?")} style={{ background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--clr-text)' }}>
                 Which camps are running low on supplies?
-              </span>
-              <span className="suggestion-chip" onClick={() => handleSuggestionClick("How much donor fund is unspent?")}>
+              </button>
+              <button className="suggestion-chip" onClick={() => handleSuggestionClick("How much donor fund is unspent?")} style={{ background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--clr-text)' }}>
                 How much donor fund is unspent?
-              </span>
-              <span className="suggestion-chip" onClick={() => handleSuggestionClick("Which beneficiaries have not been reached?")}>
+              </button>
+              <button className="suggestion-chip" onClick={() => handleSuggestionClick("Which beneficiaries have not been reached?")} style={{ background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--clr-text)' }}>
                 Which beneficiaries have not been reached?
-              </span>
+              </button>
             </div>
           )}
 
-          <div className="chat-history mt-4" id="nlq-chat-history">
+          <div className="chat-history mt-4" id="nlq-chat-history" aria-live="polite">
             {messages.map((msg, idx) => (
               <div key={idx} id={`nlq-response-${idx}`} className={`query-results mt-4 ${msg.role === 'user' ? 'user-msg-block' : 'ai-msg-block'}`}
                 style={msg.role === 'user' ? { display: 'flex', justifyContent: 'flex-end' } : {}}
@@ -235,11 +237,11 @@ const QueryChat = () => {
                   <div className="response-card">
                     <div className="response-header">
                       {msg.source === 'fallback' ? (
-                        <i className="ph-fill ph-hard-drives text-warning"></i>
+                        <i className="ph-fill ph-hard-drives text-warning" aria-hidden="true"></i>
                       ) : msg.source === 'conversational' ? (
-                        <i className="ph-fill ph-chat-circle text-primary"></i>
+                        <i className="ph-fill ph-chat-circle text-primary" aria-hidden="true"></i>
                       ) : (
-                        <i className="ph-fill ph-sparkle text-primary"></i>
+                        <i className="ph-fill ph-sparkle text-primary" aria-hidden="true"></i>
                       )}
                       <span>
                         {msg.source === 'fallback' ? 'CrisisGrid Local Analysis' : 
@@ -249,8 +251,8 @@ const QueryChat = () => {
                     </div>
                     
                     {msg.warning && (
-                      <div className="warning-banner" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', padding: '0.8rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                        <i className="ph-fill ph-warning-circle"></i>
+                      <div className="warning-banner" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', padding: '0.8rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid rgba(245, 158, 11, 0.2)' }} role="alert">
+                        <i className="ph-fill ph-warning-circle" aria-hidden="true"></i>
                         {msg.warning}
                       </div>
                     )}
@@ -261,21 +263,21 @@ const QueryChat = () => {
 
                     {msg.explanation && (
                       <div className="source-label mt-6" style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--clr-bg)', padding: '0.8rem 1rem', borderRadius: 'var(--radius-sm)' }}>
-                        <i className="ph ph-funnel"></i> <strong>Query:</strong> {msg.explanation}
+                        <i className="ph ph-funnel" aria-hidden="true"></i> <strong>Query:</strong> {msg.explanation}
                       </div>
                     )}
 
                     {msg.result_count != null && msg.source !== 'conversational' && (
                       <div style={{ fontSize: '0.85rem', color: 'var(--clr-text-muted)', marginTop: '0.5rem' }}>
-                        <i className="ph ph-rows"></i> {msg.result_count} record{msg.result_count !== 1 ? 's' : ''} matched
+                        <i className="ph ph-rows" aria-hidden="true"></i> {msg.result_count} record{msg.result_count !== 1 ? 's' : ''} matched
                       </div>
                     )}
 
                     {msg.source !== 'conversational' && (
                       <div className="response-actions mt-4 right-align">
-                         <button className="btn minimal"><i className="ph ph-thumbs-up"></i> Helpful</button>
-                         <button className="btn minimal" onClick={() => { navigator.clipboard.writeText(msg.text); toast.success('Copied!'); }}><i className="ph ph-copy"></i> Copy</button>
-                         <button className="btn secondary outline" onClick={() => {
+                         <button className="btn minimal" aria-label="Mark helpful"><i className="ph ph-thumbs-up" aria-hidden="true"></i> Helpful</button>
+                         <button className="btn minimal" onClick={() => { navigator.clipboard.writeText(msg.text); toast.success('Copied!'); }} aria-label="Copy to clipboard"><i className="ph ph-copy" aria-hidden="true"></i> Copy</button>
+                         <button className="btn secondary outline" aria-label="Export to PDF" onClick={() => {
                            const tid = toast.loading('Generating PDF...');
                             exportToPdf(`nlq-response-${idx}`, `CrisisGrid-Query-${idx + 1}`)
                               .then(() => {
@@ -283,7 +285,7 @@ const QueryChat = () => {
                                 try { incrementUsage('exports'); } catch (e) {}
                               })
                               .catch(() => toast.error('Export failed.', { id: tid }));
-                         }}><i className="ph ph-file-pdf"></i> Export PDF</button>
+                         }}><i className="ph ph-file-pdf" aria-hidden="true"></i> Export PDF</button>
                       </div>
                     )}
                   </div>
@@ -294,7 +296,7 @@ const QueryChat = () => {
           </div>
 
        </div>
-    </section>
+    </main>
   );
 };
 

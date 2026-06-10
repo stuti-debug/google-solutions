@@ -34,16 +34,16 @@ const Dashboard = () => {
   }
 
   return (
-    <section id="screen-dashboard" className="screen active with-nav fade-in dashboard-premium">
+    <main id="screen-dashboard" className="screen active with-nav fade-in dashboard-premium" aria-label="Dashboard">
       <div className="dashboard-wrapper header-offset">
         
-        <div className="main-content-panel" id="dashboard-content">
-          <div className="flex justify-between items-center mb-4" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', marginTop: '10px' }}>
-            <h2 style={{ fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--clr-text)' }}>Overview</h2>
-            <button className="btn primary" onClick={handleExport}>
-              <i className="ph ph-download-simple"></i> Export Cleaned Data
+        <section className="main-content-panel" id="dashboard-content" aria-labelledby="dashboard-heading">
+          <header className="page-header" style={{ marginBottom: '1.5rem', marginTop: '10px' }}>
+            <h2 id="dashboard-heading" style={{ fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--clr-text)' }}>Overview</h2>
+            <button className="btn primary" onClick={handleExport} aria-label="Export Cleaned Data to PDF">
+              <i className="ph ph-download-simple" aria-hidden="true"></i> Export Cleaned Data
             </button>
-          </div>
+          </header>
           {/* Summary Cards */}
           <div className="metric-row">
             <MetricCard 
@@ -78,9 +78,9 @@ const Dashboard = () => {
           
           {/* Surface Error Logs as Actionable Dashboard Cards */}
           {metrics.errorLogs.length > 0 && (
-            <div className="data-quality-alerts mt-6">
+            <div className="data-quality-alerts mt-6" role="alert" aria-live="polite">
               <h3 className="data-quality-title">
-                 <i className="ph-fill ph-warning-circle"></i> Data Quality Attention Required
+                 <i className="ph-fill ph-warning-circle" aria-hidden="true"></i> Data Quality Attention Required
               </h3>
               <p className="data-quality-copy">
                  The automated cleaning pipeline dropped {metrics.droppedInvalidRows} invalid rows. Please review these sample drops below to ensure no critical data is lost.
@@ -102,34 +102,34 @@ const Dashboard = () => {
           <DashboardTabs />
 
           <BurnDownChart />
-        </div>
+        </section>
 
         {/* Right Sidebar Column */}
-        <div className="sidebar-column" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flexShrink: 0, width: '320px' }}>
+        <aside className="sidebar-column" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flexShrink: 0, width: '320px' }} aria-label="Dashboard Sidebar">
           
           {/* Priority Box */}
-          <aside className="insights-sidebar" style={{ width: '100%' }}>
+          <div className="insights-sidebar" style={{ width: '100%' }}>
             <PriorityScores />
-          </aside>
+          </div>
 
           {/* Insights Box */}
-          <aside className="insights-sidebar" style={{ width: '100%' }}>
-            <div className="sidebar-header">
-              <h3><i className="ph-fill ph-sparkle text-primary"></i> AI Insights</h3>
+          <div className="insights-sidebar" style={{ width: '100%' }} aria-labelledby="insights-heading">
+            <header className="sidebar-header">
+              <h3 id="insights-heading"><i className="ph-fill ph-sparkle text-primary" aria-hidden="true"></i> AI Insights</h3>
               <span className="refresh-time">Auto-generated</span>
-            </div>
+            </header>
             
-            <div className="insight-cards-list mt-4">
+            <div className="insight-cards-list mt-4" aria-live="polite">
               {loadingInsights ? (
                 <>
-                  <div className="insight-card insight-card-skeleton"></div>
-                  <div className="insight-card insight-card-skeleton delay-1"></div>
-                  <div className="insight-card insight-card-skeleton delay-2"></div>
+                  <div className="insight-card insight-card-skeleton" aria-hidden="true"></div>
+                  <div className="insight-card insight-card-skeleton delay-1" aria-hidden="true"></div>
+                  <div className="insight-card insight-card-skeleton delay-2" aria-hidden="true"></div>
                 </>
               ) : insights.length > 0 ? (
                  insights.slice(0, 3).map((insight, index) => (
                    <div key={index} className="insight-card primary-light">
-                      <div className="insight-icon">💡</div>
+                      <div className="insight-icon" aria-hidden="true">💡</div>
                       <p>{insight}</p>
                    </div>
                  ))
@@ -139,17 +139,17 @@ const Dashboard = () => {
                   </div>
               )}
             </div>
-          </aside>
+          </div>
 
           {/* Affected Population Chart */}
           <div style={{ width: '100%', marginTop: '1rem' }}>
             <AffectedPopulationChart />
           </div>
 
-        </div>
+        </aside>
 
       </div>
-    </section>
+    </main>
   );
 };
 

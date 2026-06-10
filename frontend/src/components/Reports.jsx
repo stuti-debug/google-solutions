@@ -293,7 +293,7 @@ const Reports = () => {
   const activeInfo = REPORT_TYPES.find(r => r.id === activeReport);
 
   return (
-    <section id="screen-reports" className="screen active with-nav fade-in">
+    <main id="screen-reports" className="screen active with-nav fade-in" aria-label="Reports">
       <div className="sitrep-shell" style={{ maxWidth: activeReport ? '900px' : '1000px', paddingTop: '2rem' }}>
         <header className="page-header" style={{ marginBottom: '2rem' }}>
           <div>
@@ -328,16 +328,16 @@ const Reports = () => {
         {/* Active Report View */}
         {activeReport && (
           <div>
-            <button className="btn minimal" onClick={goBack} style={{ marginBottom: '1.5rem' }}>
-              <i className="ph ph-arrow-left"></i> Back to all reports
+            <button className="btn minimal" onClick={goBack} style={{ marginBottom: '1.5rem' }} aria-label="Back to all reports">
+              <i className="ph ph-arrow-left" aria-hidden="true"></i> Back to all reports
             </button>
 
             {reportLoading && (
-              <div className="sitrep-loading">
-                <div className="sitrep-loading-icon"><i className="ph ph-circle-notch ph-spin"></i></div>
+              <div className="sitrep-loading" aria-live="polite" aria-busy="true">
+                <div className="sitrep-loading-icon"><i className="ph ph-circle-notch ph-spin" aria-hidden="true"></i></div>
                 <h3>Generating {activeInfo?.label}...</h3>
                 <p className="text-muted">Analyzing your session data.</p>
-                <div className="sitrep-skeleton-grid">
+                <div className="sitrep-skeleton-grid" aria-hidden="true">
                   <div className="sitrep-skeleton-card"></div>
                   <div className="sitrep-skeleton-card delay-1"></div>
                 </div>
@@ -357,8 +357,8 @@ const Reports = () => {
                     </div>
                   </div>
                   <div className="sitrep-actions">
-                    <button className="btn minimal" onClick={() => { navigator.clipboard.writeText(JSON.stringify(reportData, null, 2)); toast.success('Copied!'); }}>
-                      <i className="ph ph-copy"></i> Copy
+                    <button className="btn minimal" onClick={() => { navigator.clipboard.writeText(JSON.stringify(reportData, null, 2)); toast.success('Copied!'); }} aria-label="Copy report data">
+                      <i className="ph ph-copy" aria-hidden="true"></i> Copy
                     </button>
                     <button className="btn minimal" disabled={exporting} onClick={() => {
                       setExporting(true);
@@ -371,15 +371,15 @@ const Reports = () => {
                         })
                         .catch(() => toast.error('PDF export failed.', { id: toastId }))
                         .finally(() => setExporting(false));
-                    }}>
-                      {exporting ? <i className="ph ph-spinner ph-spin"></i> : <i className="ph ph-file-pdf"></i>} Export PDF
+                    }} aria-label="Export report to PDF">
+                      {exporting ? <i className="ph ph-spinner ph-spin" aria-hidden="true"></i> : <i className="ph ph-file-pdf" aria-hidden="true"></i>} Export PDF
                     </button>
                     <ShareButton size="md" label="Share" getText={() => {
                       if (activeReport === 'sitrep' && reportData?.report) return formatSitRepBrief(reportData.report);
                       return formatReportSummary(reportData || {});
                     }} />
-                    <button className="btn primary" onClick={() => generateReport(activeReport)}>
-                      <i className="ph-fill ph-arrows-clockwise"></i> Refresh
+                    <button className="btn primary" onClick={() => generateReport(activeReport)} aria-label="Refresh report">
+                      <i className="ph-fill ph-arrows-clockwise" aria-hidden="true"></i> Refresh
                     </button>
                   </div>
                 </div>
@@ -390,7 +390,7 @@ const Reports = () => {
           </div>
         )}
       </div>
-    </section>
+    </main>
   );
 };
 

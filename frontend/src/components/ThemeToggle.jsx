@@ -31,7 +31,7 @@ const ThemeToggle = () => {
       aria-label="Toggle Dark Mode"
       title="Toggle Dark Mode"
     >
-      {isDark ? <i className="ph ph-sun"></i> : <i className="ph ph-moon"></i>}
+      {isDark ? <i className="ph ph-sun" aria-hidden="true"></i> : <i className="ph ph-moon" aria-hidden="true"></i>}
     </button>
   );
 };

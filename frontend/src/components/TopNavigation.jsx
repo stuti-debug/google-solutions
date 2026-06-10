@@ -52,9 +52,9 @@ const TopNavigation = () => {
   }, [sessionData, API_BASE_URL]);
 
   return (
-    <nav id="main-nav">
+    <nav id="main-nav" aria-label="Main Navigation">
       <div className="nav-brand" onClick={() => navigate('screen-dashboard')} style={{ cursor: 'pointer' }}>
-        <i className="ph-fill ph-grid-four brand-icon"></i>
+        <i className="ph-fill ph-grid-four brand-icon" aria-hidden="true"></i>
         <span>CrisisGrid</span>
       </div>
       <div className="nav-links" style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginLeft: '2rem' }}>
@@ -97,15 +97,21 @@ const TopNavigation = () => {
       </div>
       <div className="nav-user-actions" style={{ marginLeft: 'auto' }}>
         <div className="notification-wrapper" ref={bellRef} style={{ position: 'relative' }}>
-          <i 
-            className="ph ph-bell notification-bell text-muted" 
-            style={{ cursor: 'pointer', position: 'relative' }}
+          <button 
+            className="notification-bell-btn" 
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={() => setShowNotifications(!showNotifications)}
+            aria-label="Notifications"
           >
-            {notifications.length > 0 && (
-              <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', background: '#EF4444', borderRadius: '50%', border: '2px solid var(--glass-bg)' }}></span>
-            )}
-          </i>
+            <i 
+              className="ph ph-bell notification-bell text-muted" 
+              style={{ position: 'relative', fontSize: '1.5rem' }}
+            >
+              {notifications.length > 0 && (
+                <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', background: '#EF4444', borderRadius: '50%', border: '2px solid var(--glass-bg)' }}></span>
+              )}
+            </i>
+          </button>
           
           {showNotifications && (
             <div className="notifications-dropdown" style={{
@@ -132,8 +138,8 @@ const TopNavigation = () => {
                     return (
                     <div key={notif.id} style={{ padding: '1rem', borderBottom: '1px solid rgba(0,0,0,0.03)', cursor: 'pointer', background: style.bg, transition: 'background 0.2s' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                        <i className={style.icon} style={{ marginTop: '3px', color: style.color, flexShrink: 0 }}></i>
-                        <div>
+                        <i className={style.icon} style={{ marginTop: '3px', color: style.color, flexShrink: 0 }} aria-hidden="true"></i>
+                        <div aria-live="polite">
                           <h5 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', color: 'var(--clr-text)' }}>{notif.title}</h5>
                           <p style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', color: 'var(--clr-text-muted)', lineHeight: 1.3 }}>{notif.message}</p>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -146,8 +152,8 @@ const TopNavigation = () => {
                     );
                   })
                 ) : (
-                  <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--clr-text-muted)', fontSize: '0.85rem' }}>
-                    <i className="ph ph-check-circle" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'block', color: 'var(--clr-success)' }}></i>
+                  <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--clr-text-muted)', fontSize: '0.85rem' }} aria-live="polite">
+                    <i className="ph ph-check-circle" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'block', color: 'var(--clr-success)' }} aria-hidden="true"></i>
                     You're all caught up!
                   </div>
                 )}

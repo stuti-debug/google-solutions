@@ -206,37 +206,37 @@ const Logistics = () => {
 
   if (!sessionId) {
     return (
-      <section id="screen-logistics" className="screen active with-nav fade-in dashboard-premium">
+      <main id="screen-logistics" className="screen active with-nav fade-in dashboard-premium" aria-label="Logistics">
         <div className="dashboard-wrapper header-offset flex-center" style={{ minHeight: '80vh', flexDirection: 'column' }}>
-           <i className="ph ph-lock" style={{ fontSize: '3rem', color: 'var(--clr-text-muted)', marginBottom: '1rem' }}></i>
+           <i className="ph ph-lock" style={{ fontSize: '3rem', color: 'var(--clr-text-muted)', marginBottom: '1rem' }} aria-hidden="true"></i>
            <p style={{ color: 'var(--clr-text-muted)' }}>No active operational session. Please upload datasets to get started.</p>
         </div>
-      </section>
+      </main>
     );
   }
 
   return (
-    <section id="screen-logistics" className="screen active with-nav fade-in dashboard-premium">
+    <main id="screen-logistics" className="screen active with-nav fade-in dashboard-premium" aria-label="Logistics">
       <div className="dashboard-wrapper header-offset" style={{ maxWidth: '1600px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
         {/* Workspace Header */}
-        <div className="flex justify-between items-center" style={{ padding: '0 1rem', display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+        <header className="page-header" style={{ padding: '0 1rem' }}>
           <div>
             <h2 style={{ fontSize: '2.2rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--clr-text)' }}>AI Supply Logistics</h2>
             <p style={{ color: 'var(--clr-text-muted)', marginTop: '0.2rem', fontSize: '0.95rem' }}>Automated resource dispatch, allocation matching, and stock health tracking.</p>
           </div>
-          <div style={{ display: 'flex', gap: '0.8rem' }}>
-            <button className="btn secondary" onClick={() => fetchData(true)} disabled={loading} style={{ border: '1px solid var(--glass-border)', background: 'var(--glass-bg)' }}>
-               <i className={`ph ph-arrows-clockwise ${loading && !recalculating ? 'spin' : ''}`}></i> Sync Data
+          <div className="logistics-actions">
+            <button className="btn secondary" onClick={() => fetchData(true)} disabled={loading} style={{ border: '1px solid var(--glass-border)', background: 'var(--glass-bg)' }} aria-label="Synchronize logistics data">
+               <i className={`ph ph-arrows-clockwise ${loading && !recalculating ? 'spin' : ''}`} aria-hidden="true"></i> Sync Data
             </button>
-            <button className="btn primary" onClick={handleRecalculate} disabled={recalculating} style={{ boxShadow: '0 8px 16px rgba(13, 115, 119, 0.2)' }}>
-               <i className={`ph ph-sparkle ${recalculating ? 'spin' : ''}`}></i> {matches.length === 0 ? "Generate Match Plan" : "Recalculate Match"}
+            <button className="btn primary" onClick={handleRecalculate} disabled={recalculating} style={{ boxShadow: '0 8px 16px rgba(13, 115, 119, 0.2)' }} aria-label={matches.length === 0 ? "Generate Match Plan" : "Recalculate Match Plan"}>
+               <i className={`ph ph-sparkle ${recalculating ? 'spin' : ''}`} aria-hidden="true"></i> {matches.length === 0 ? "Generate Match Plan" : "Recalculate Match"}
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Stats Strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.2rem', padding: '0 1rem' }}>
+        <div className="logistics-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.2rem', padding: '0 1rem' }}>
           <div style={{ background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', padding: '1.2rem', borderRadius: '16px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--clr-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Allocations</div>
             <div style={{ fontSize: '1.8rem', fontWeight: 700, marginTop: '0.4rem', color: 'var(--clr-text)' }}>{totalAllocations} active routes</div>
@@ -252,33 +252,34 @@ const Logistics = () => {
         </div>
 
         {/* Two-Column Workspace Layout */}
-        <div style={{ display: 'flex', gap: '1.5rem', padding: '0 1rem' }}>
+        <div className="logistics-main-layout">
           
           {/* Left Area: Matches List (2/3 width) */}
           <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
             
             {/* Search filter for matches */}
-            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '0.4rem 0.8rem', boxShadow: 'var(--shadow-sm)' }}>
-              <i className="ph ph-magnifying-glass text-muted" style={{ fontSize: '1.1rem', marginRight: '0.5rem' }}></i>
+            <div className="logistics-search-bar" style={{ display: 'flex', alignItems: 'center', background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '0.4rem 0.8rem', boxShadow: 'var(--shadow-sm)' }}>
+              <i className="ph ph-magnifying-glass text-muted" style={{ fontSize: '1.1rem', marginRight: '0.5rem' }} aria-hidden="true"></i>
               <input 
                 type="text" 
                 placeholder="Filter dispatches by beneficiary camp, warehouse, or item need..."
                 value={searchQuery}
+                aria-label="Filter dispatches"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '0.9rem', color: 'var(--clr-text)' }}
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: 'var(--clr-text-muted)', cursor: 'pointer', padding: '0.2rem' }}>
-                  <i className="ph ph-x-circle"></i>
+                <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: 'var(--clr-text-muted)', cursor: 'pointer', padding: '0.2rem' }} aria-label="Clear search">
+                  <i className="ph ph-x-circle" aria-hidden="true"></i>
                 </button>
               )}
             </div>
 
             {/* Match Cards List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} aria-live="polite">
               {error && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '1rem', borderRadius: '12px', borderLeft: '4px solid #EF4444' }}>
-                  <i className="ph-fill ph-warning-circle"></i> {error}
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '1rem', borderRadius: '12px', borderLeft: '4px solid #EF4444' }} role="alert">
+                  <i className="ph-fill ph-warning-circle" aria-hidden="true"></i> {error}
                 </div>
               )}
 
@@ -289,7 +290,7 @@ const Logistics = () => {
                 </div>
               ) : filteredMatches.length > 0 ? (
                 filteredMatches.map((match) => (
-                  <div key={match.id} style={{
+                  <div key={match.id} className="logistics-match-card" style={{
                     background: 'var(--clr-surface)',
                     border: '1px solid var(--glass-border)',
                     borderRadius: '16px',
@@ -307,34 +308,34 @@ const Logistics = () => {
                       background: getUrgencyColor(match.urgency)
                     }}></div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div className="logistics-match-card-content">
                       {/* Flow Diagram */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', flex: 1, minWidth: '320px' }}>
+                      <div className="logistics-flow-diagram">
                         
                         {/* Source */}
-                        <div style={{ textAlign: 'center', minWidth: '110px' }}>
+                        <div className="logistics-flow-node logistics-flow-source">
                           <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--clr-text-muted)', fontWeight: 600, marginBottom: '0.2rem' }}>Source</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--clr-bg)', padding: '0.4rem 0.7rem', borderRadius: '8px', border: '1px dashed var(--clr-border)' }}>
+                          <div className="logistics-node-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--clr-bg)', padding: '0.4rem 0.7rem', borderRadius: '8px', border: '1px dashed var(--clr-border)' }}>
                             <i className="ph-fill ph-warehouse text-primary" style={{ fontSize: '0.95rem' }}></i>
                             <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--clr-text)' }}>{match.source}</span>
                           </div>
                         </div>
 
                         {/* Quantity Line */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--clr-primary)', background: 'var(--clr-surface)', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid var(--glass-border)', zIndex: 2 }}>
+                        <div className="logistics-flow-center">
+                           <div className="logistics-quantity-pill" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--clr-primary)', background: 'var(--clr-surface)', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid var(--glass-border)', zIndex: 2 }}>
                              {match.allocated} {match.unit}
                            </div>
-                           <div style={{ width: '100%', height: '2px', background: 'var(--clr-primary)', opacity: 0.3, marginTop: '-10px', position: 'relative' }}>
+                           <div className="logistics-flow-line">
                              <i className="ph-fill ph-caret-right text-primary" style={{ position: 'absolute', right: '-4px', top: '-6px' }}></i>
                            </div>
-                           <div style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', marginTop: '0.4rem', fontWeight: 500 }}>{match.need}</div>
+                           <div className="logistics-need-label" style={{ fontSize: '0.75rem', color: 'var(--clr-text-muted)', marginTop: '0.4rem', fontWeight: 500 }}>{match.need}</div>
                         </div>
 
                         {/* Destination */}
-                        <div style={{ textAlign: 'center', minWidth: '110px' }}>
+                        <div className="logistics-flow-node logistics-flow-dest">
                           <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--clr-text-muted)', fontWeight: 600, marginBottom: '0.2rem' }}>Destination</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--clr-bg)', padding: '0.4rem 0.7rem', borderRadius: '8px', border: '1px solid var(--clr-border)' }}>
+                          <div className="logistics-node-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--clr-bg)', padding: '0.4rem 0.7rem', borderRadius: '8px', border: '1px solid var(--clr-border)' }}>
                             <i className="ph-fill ph-map-pin text-danger" style={{ fontSize: '0.95rem' }}></i>
                             <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--clr-text)' }}>{match.beneficiary}</span>
                           </div>
@@ -343,8 +344,8 @@ const Logistics = () => {
                       </div>
 
                       {/* Reasoning Box & Share */}
-                      <div style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', gap: '0.8rem', minWidth: '240px' }}>
-                        <div style={{ flex: 1, background: 'var(--clr-bg)', padding: '0.8rem', borderRadius: '10px', fontSize: '0.8rem', color: 'var(--clr-text-muted)', borderLeft: '3px solid var(--clr-primary)', lineHeight: 1.45 }}>
+                      <div className="logistics-reasoning-container">
+                        <div className="logistics-reasoning-card" style={{ flex: 1, background: 'var(--clr-bg)', padding: '0.8rem', borderRadius: '10px', fontSize: '0.8rem', color: 'var(--clr-text-muted)', borderLeft: '3px solid var(--clr-primary)', lineHeight: 1.45 }}>
                           <i className="ph-fill ph-sparkle text-primary" style={{ marginRight: '0.4rem' }}></i>
                           {match.reasoning}
                         </div>
@@ -379,10 +380,10 @@ const Logistics = () => {
           </div>
 
           {/* Right Area: Warehouse Stocks (1/3 width) */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: '320px', height: 'fit-content' }}>
+          <aside className="logistics-stock-sidebar" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: '320px', height: 'fit-content' }}>
             
             {/* Stocks Container */}
-            <div style={{ 
+            <section style={{ 
               background: 'var(--clr-surface)', 
               border: '1px solid var(--glass-border)', 
               borderRadius: '24px', 
@@ -401,7 +402,7 @@ const Logistics = () => {
               </div>
 
               {/* Warehouse stock table list */}
-              <div style={{ paddingRight: '0.2rem' }}>
+              <div className="table-responsive">
                 {inventory.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                     <thead>
@@ -432,16 +433,16 @@ const Logistics = () => {
                   </table>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--clr-text-muted)' }}>
-                    <i className="ph ph-package" style={{ fontSize: '2rem', opacity: 0.4, marginBottom: '0.5rem', display: 'block' }}></i>
+                    <i className="ph ph-package" style={{ fontSize: '2rem', opacity: 0.4, marginBottom: '0.5rem', display: 'block' }} aria-hidden="true"></i>
                     No warehouse inventory loaded.
                   </div>
                 )}
               </div>
 
-            </div>
+            </section>
 
             {/* Inventory Breakdown Chart Card */}
-            <div style={{ 
+            <section style={{ 
               background: 'var(--clr-surface)', 
               border: '1px solid var(--glass-border)', 
               borderRadius: '24px', 
@@ -457,7 +458,7 @@ const Logistics = () => {
                </h3>
                <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', marginTop: '0.1rem', margin: 0 }}>Distribution of current supply stocks by item category.</p>
                <div style={{ width: '100%', height: 220, marginTop: '0.5rem' }}>
-                 <ResponsiveContainer>
+                 <ResponsiveContainer width="100%" height="100%">
                    <PieChart>
                      <Pie
                        data={chartData}
@@ -481,14 +482,14 @@ const Logistics = () => {
                    </PieChart>
                  </ResponsiveContainer>
                </div>
-            </div>
+            </section>
 
-          </div>
+          </aside>
 
         </div>
 
       </div>
-    </section>
+    </main>
   );
 };
 

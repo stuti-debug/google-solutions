@@ -83,7 +83,7 @@ const UploadOnboarding = () => {
       </div>
 
       {stepNumber === 1 && (
-        <section id="screen-onboard-1" className="screen active fade-in flex-center">
+        <main id="screen-onboard-1" className="screen active fade-in flex-center" aria-label="Select NGO Type">
           <div className="onboard-container">
             <h2 className="text-center">What kind of NGO are you?</h2>
             <p className="text-center">Select your primary focus so we can customize your dashboard.</p>
@@ -101,7 +101,7 @@ const UploadOnboarding = () => {
                   className={`option-card ${selectedNGO === option.id ? 'selected' : ''}`} 
                   onClick={() => setSelectedNGO(option.id)}
                 >
-                  <i className={`ph ${option.icon} option-icon`}></i>
+                  <i className={`ph ${option.icon} option-icon`} aria-hidden="true"></i>
                   <h3>{option.label}</h3>
                 </div>
               ))}
@@ -118,18 +118,18 @@ const UploadOnboarding = () => {
                   navigate('screen-onboard-2')
                 }}
               >
-                Next <i className="ph ph-arrow-right"></i>
+                Next <i className="ph ph-arrow-right" aria-hidden="true"></i>
               </button>
             </div>
           </div>
-        </section>
+        </main>
       )}
 
       {stepNumber === 2 && (
-        <section id="screen-onboard-2" className="screen active fade-in flex-center">
+        <main id="screen-onboard-2" className="screen active fade-in flex-center" aria-label="Upload Data">
           <div className="onboard-container wide">
-            <button className="btn minimal icon-left mb-4" onClick={() => navigate('screen-onboard-1')}>
-              <i className="ph ph-arrow-left"></i> Back
+            <button className="btn minimal icon-left mb-4" onClick={() => navigate('screen-onboard-1')} aria-label="Go back">
+              <i className="ph ph-arrow-left" aria-hidden="true"></i> Back
             </button>
             <h2>Upload your data</h2>
             <p>Don't worry about messy columns or missing values — our AI handles that.</p>
@@ -138,7 +138,7 @@ const UploadOnboarding = () => {
               {['beneficiaries', 'inventory', 'donors'].map(category => (
                 <div className="upload-column" key={category}>
                   <h4 className="category-title" style={{ textTransform: 'capitalize' }}>
-                    <i className={`ph ${category === 'beneficiaries' ? 'ph-users' : category === 'inventory' ? 'ph-package' : 'ph-hand-coins'}`}></i> 
+                    <i className={`ph ${category === 'beneficiaries' ? 'ph-users' : category === 'inventory' ? 'ph-package' : 'ph-hand-coins'}`} aria-hidden="true"></i> 
                     {category}
                   </h4>
                   <label 
@@ -148,7 +148,7 @@ const UploadOnboarding = () => {
                     onDrop={(e) => handleFileDrop(e, category)}
                     style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                   >
-                    <i className="ph ph-cloud-arrow-up text-primary"></i>
+                    <i className="ph ph-cloud-arrow-up text-primary" aria-hidden="true"></i>
                     <span>{uploadedFiles[category] ? uploadedFiles[category].name : 'Drop files here or click'}</span>
                     <div className="badges"><span className="badge file-badge">CSV</span><span className="badge file-badge">XLSX</span></div>
                     <input 
@@ -168,24 +168,24 @@ const UploadOnboarding = () => {
             </div>
 
             <div className="actions right-align mt-6">
-              <button className="btn primary" onClick={handleUploadAndAnalyze}>Upload & Analyse <i className="ph ph-arrow-right"></i></button>
+              <button className="btn primary" onClick={handleUploadAndAnalyze}>Upload & Analyse <i className="ph ph-arrow-right" aria-hidden="true"></i></button>
             </div>
           </div>
-        </section>
+        </main>
       )}
 
       {stepNumber === 3 && (
-        <section id="screen-onboard-3" className="screen active fade-in flex-center">
+        <main id="screen-onboard-3" className="screen active fade-in flex-center" aria-label="Processing Data">
           <div className="processing-container">
-            <h2 className="text-center mb-6">CrisisGrid is working its magic</h2>
+            <h2 className="text-center mb-6" aria-live="polite">CrisisGrid is working its magic</h2>
             
-            <div className="ai-loader mx-auto">
+            <div className="ai-loader mx-auto" aria-hidden="true">
               <div className="circle primary-ring"></div>
               <div className="circle accent-ring"></div>
               <i className="ph ph-magic-wand ai-icon"></i>
             </div>
             
-            <div className="checklist mt-8" id="ai-checklist">
+            <div className="checklist mt-8" id="ai-checklist" aria-live="polite">
               {renderCheckItem(0, "Reading your files...")}
               {renderCheckItem(1, "Detecting column types...")}
               {renderCheckItem(2, "Cleaning inconsistencies...")}
@@ -194,7 +194,7 @@ const UploadOnboarding = () => {
 
             {checklistSuccess && (
               <div className="actions center-align mt-8" id="finish-onboard-btn">
-                <button className="btn primary" onClick={() => navigate('screen-dashboard')}>Take me to my Dashboard <i className="ph ph-arrow-right"></i></button>
+                <button className="btn primary" onClick={() => navigate('screen-dashboard')}>Take me to my Dashboard <i className="ph ph-arrow-right" aria-hidden="true"></i></button>
               </div>
             )}
             {checklistSuccess === false && (
@@ -203,7 +203,7 @@ const UploadOnboarding = () => {
                </div>
             )}
           </div>
-        </section>
+        </main>
       )}
     </>
   );
