@@ -1,198 +1,166 @@
 # CrisisGrid: AI-Powered Resilience for Disaster Relief
 
-**Revolutionizing Humanitarian Data Management & Coordination with Google Gemini AI**
+**Revolutionizing Humanitarian Data Management with Google Gemini AI**
 
 [![Google Solution Challenge 2026](https://img.shields.io/badge/Google-Solution%20Challenge%202026-blue)](https://developers.google.com/community/solutions-challenge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 📌 1. Executive Summary & Problem Statement
+## 📌 Problem Statement
+In the wake of a disaster, every second counts. However, relief organizations are often paralyzed by **Data Chaos**. NGOs receive crucial information (beneficiary lists, supply inventories, donor logs) from dozens of field teams, each using different spreadsheet formats, inconsistent naming conventions, and messy, duplicate entries.
 
-In the immediate aftermath of a natural disaster, relief organizations are often paralyzed by **Data Chaos**. NGOs, first responders, and local agencies receive critical data streams (beneficiary lists, supply inventories, donor logs) from multiple sources in inconsistent spreadsheets, corrupted CSVs, and non-standardized formats. 
-
-Manually sanitizing, parsing, and unifying these files can take days—delays that translate directly to lost lives and inefficient resource allocation. 
-
-**CrisisGrid** resolves this bottleneck. By integrating Google's Gemini AI with Firestore and Firebase Auth, CrisisGrid automatically:
-1. Detects unstructured data payloads.
-2. Maps inconsistent columns to standard schemas.
-3. Cleans geographical typos (e.g. normalizing districts).
-4. Provides secure, multi-tenant analytics and natural language querying for on-the-ground decision makers in **under 60 seconds**.
+Manually cleaning and unifying this data can take days—days that the most vulnerable populations don't have. **CrisisGrid** solves this by leveraging Google's Gemini AI to automatically clean, standardize, and unify disparate disaster relief datasets in seconds.
 
 ---
 
-## 🌍 2. UN Sustainable Development Goals (SDGs) Alignment
+## 🌍 UN Sustainable Development Goals (SDGs)
+CrisisGrid is built to address the core objectives of the Google Solution Challenge by focusing on:
 
-CrisisGrid is built to address the core objective of the Google Solution Challenge by focusing on:
-
-*   **SDG 11: Sustainable Cities and Communities**
-    *   *Target 11.5:* Significantly reduce the number of deaths and people affected by disasters.
-    *   *CrisisGrid Impact:* By providing emergency response agencies with clean, unified, and geolocated data, CrisisGrid reduces manual processing overhead by **95%**, allowing teams to coordinate supply logistics and allocate resources to high-priority disaster zones rapidly.
-*   **SDG 13: Climate Action**
-    *   *Target 13.1:* Strengthen resilience and adaptive capacity to climate-related hazards and disasters.
-    *   *CrisisGrid Impact:* As extreme weather events increase in frequency, CrisisGrid enables NGOs to scale their operation pipelines on-demand, sanitizing lists in seconds to ensure fast and accurate aid dispatch.
+*   **SDG 1: No Poverty** – By ensuring that aid reaches the right people without administrative delay, we help prevent vulnerable populations from falling deeper into poverty during crises.
+*   **SDG 11: Sustainable Cities and Communities** – We enhance urban resilience by providing city planners and disaster response teams with accurate, real-time data to manage resources and infrastructure during emergencies.
 
 ---
 
-## 🏗️ 3. Technical Architecture
-
-The following diagram illustrates the secure data ingestion, cleaning, and natural language query flow:
-
-```mermaid
-graph TD
-    Client[React Frontend / Vite] -->|Auth Token & Session ID| Security[Security Middleware - verify_session_ownership]
-    Security -->|Authorized| API[FastAPI Backend]
-    API -->|1. Detect & Map Schema| Gemini[Google Gemini AI]
-    API -->|2. Persistent Session Metadata| SQLite[(SQLite Store)]
-    API -->|3. Cleaned Datasets & Logs| Firestore[(Cloud Firestore)]
-    Gemini -.->|Canonical Column Mapping| API
-    Client -->|4. Natural Language Queries| Query[Query Route]
-    Query -->|Retrieve Data| Firestore
-    Query -->|Contextual Prompting with Statistical Headers| Gemini
-```
+## 🚀 Live Demo
+**Check out the live application here:** [Live Demo URL](https://crisisgrid-demo.vercel.app)
 
 ---
 
-## 🛠️ 4. Google Technologies Stack
+## 🔥 Impact / Real-World Use Case
+Imagine an NGO responding to a major flood. They receive:
+1.  A "Field_List.csv" from Team A with columns like `name_of_person` and `loc`.
+2.  An "Inventory.xlsx" from Team B with `item_qty` and `wh_location`.
+3.  A "Donors.csv" from a global partner with `Amount_USD` and `Provider`.
 
-CrisisGrid leverages Google's developer ecosystem to achieve speed, security, and scalability:
-
-*   **Google Gemini AI (Gemini 1.5 Flash)**
-    *   *Dynamic Schema Mapping:* Analyzes arbitrary headers (e.g., `loc_val`, `ph_no`) and maps them to a canonical schema (`district`, `phone`).
-    *   *Low-Latency AI Querying:* Employs a context window optimization strategy: natural language queries are injected with a statistical aggregate header (`Total records: N`) and capped at the top 10 relevant rows. This eliminates latency bottlenecks and prevents model hallucinations during high-stress live demos.
-*   **Firebase Authentication**
-    *   Enforces secure, token-based authentication on the client and validates session contexts on the server, ensuring NGOs have isolated sandbox environments.
-*   **Cloud Firestore**
-    *   Serves as our primary real-time database, storing unified, cleaned records under strict document paths and access schemas.
+**Without CrisisGrid:** A data officer manually copies and parses spreadsheets for hours.
+**With CrisisGrid:** The officer drops all three files into the dashboard. CrisisGrid's AI identifies the data types, maps the messy columns to a canonical schema, fixes typos in district names, and provides a unified dashboard for decision-makers **in under 60 seconds.**
 
 ---
 
-## 🔒 5. Security & Multi-Tenant Isolation
+## ✨ Features
 
-Humanitarian work handles highly sensitive data (names, contact numbers, and coordinates of vulnerable populations). CrisisGrid enforces robust multi-tenancy rules:
-*   **Session Boundary Enforcement:** Every job and cleaning session is tagged with the user's validated Firebase `user_id`.
-*   **Server-Side Hardening:** Every endpoint in [routes/](file:///Users/anshpratapsingh/Documents/CrisisGrid/backend/routes) (including reports, sitreps, query chats, and data exports) verifies token-to-session ownership before querying the SQLite database or Firestore. Unauthorized requests are immediately blocked with a `403 Forbidden` response.
-*   **In-Memory Sanitization:** Temporary datasets are parsed and processed in memory during the cleaning pipeline to prevent unwanted disk caching.
+### 🎨 Premium Glassmorphic UI/UX System
+- **Responsive Theme Engine**: Adapts to Light, Dark, and System modes seamlessly using tailored HSL color palettes.
+- **Micro-Interactions**: Subtle card-lift animations, staggered loading transitions, and Apple Watch-style circular progress gauges for priority hotspots.
+- **Notification Drawer**: Houses real-time system alerts and critical stocks thresholds in a scroll-bounded popup.
 
----
+### 🗺️ Advanced Google Maps Visualizations & Geocoding
+- **Marker Clustering & Route Polylines**: Renders custom warehouse/camp pins, aggregates dense clusters with `MarkerClusterer`, and draws geodesic route lines (`Polyline`) connecting supplies to disaster zones.
+- **Geocoding Manual Pin Drop Mode**: Click on the map to manually resolve coordinates for unrecognized camp/affected areas, instantly saving them to the persistent cache.
+- **Geocoding API with SQLite Cache Fallback**: Resolves locations via Google Maps Geocoding API with a local SQLite caching mechanism to reduce latency and API calls, working offline as a local fallback.
 
-## ♿ 6. Inclusive Design & Accessibility (a11y)
+### 📋 Optimized Logistics Matching (Google OR-Tools)
+- **GLOP Solver Optimizer**: Uses Google OR-Tools GLOP linear programming solver to solve the min-cost transportation network flow, minimizing transit distances and matching supply warehouses to camp needs based on priority scores.
+- **Warehouse Stock Indicators**: Color-coded stock badges (Critical, Low, Healthy) placed side-by-side with match records.
+- **Oscillator Sound Chimes**: Plays a pleasant synthesized C5-E5 sound cue using browser HTML5 oscillators when matches are recalculated.
 
-First responders operate under extreme physical and cognitive stress. The frontend is built to be accessible to everyone:
-*   **WCAG 2.1 AA Focus Indicators:** High-contrast `*:focus-visible` focus rings (defined in [a11y.css](file:///Users/anshpratapsingh/Documents/CrisisGrid/frontend/src/a11y.css)) provide a clear visual indicator for keyboard-only navigators.
-*   **Screen Reader Optimization:** Dropzones and hidden inputs in the onboarding pages are keyboard navigable (`tabIndex="0"`) and include screen-reader helper texts (`.sr-only`). 
-*   **Accessible Data Charts:** Recharts containers in [BurnDownChart.jsx](file:///Users/anshpratapsingh/Documents/CrisisGrid/frontend/src/components/BurnDownChart.jsx) and [DataCharts.jsx](file:///Users/anshpratapsingh/Documents/CrisisGrid/frontend/src/components/DataCharts.jsx) are tagged with `role="img"` and detailed descriptions via `aria-label`.
+### 🔄 Real-Time Multi-User Collaboration (Cloud Firestore)
+- **Active Session Synchronization**: Uses Firestore document listeners (`onSnapshot`) to mirror session metadata across all active web tabs in real-time, refreshing dashboard charts, map routes, and priority cards instantly when another user makes changes.
 
----
+### 📶 Offline-First PWA & IndexedDB Queue
+- **Offline PWA Support**: Configured service workers via `vite-plugin-pwa` to cache HTML, JS, CSS, Google Fonts, and local data queries for fully offline loading.
+- **IndexedDB Transaction Queue**: Buffers table edits and manual pin drops locally while offline, automatically executing them in-order to sync with the backend database once connectivity is restored.
 
-## 📂 7. Project Structure
+### 🎙️ Bilingual Speech-to-Text NLQ
+- **Mixed Dialects Support**: Chat assistant that answers queries in English, Hindi, and Hinglish.
+- **Voice Pulse Indicators**: Visual pulse animations and audio cues for recording controls.
 
-```
-CrisisGrid/
-├── backend/                   # Python FastAPI Backend
-│   ├── core/                  # Security middleware, database connections
-│   │   ├── firebase.py        # Firebase initialization
-│   │   ├── matching_engine.py # Record deduplication algorithms
-│   │   └── security.py        # Auth validation & session isolation
-│   ├── routes/                # Endpoint controllers (clean, query, sitrep, etc.)
-│   ├── services/              # Core business logic
-│   │   ├── ai_mapper.py       # Gemini AI dynamic column mapping
-│   │   ├── cleaner.py         # Schema-driven data cleaning
-│   │   └── session_store.py   # SQLite-backed session metadata
-│   ├── app.py                 # Backend entrypoint
-│   └── requirements.txt       # Python dependencies
-│
-└── frontend/                  # React Frontend (Vite + CSS)
-    ├── src/
-    │   ├── components/        # React components (Dashboard, QueryChat, Logistics)
-    │   ├── App.jsx            # Application Router & Layout
-    │   ├── main.jsx           # Global imports and render loop
-    │   └── a11y.css           # Focus styles & accessibility overrides
-    ├── index.html             # Document entrypoint
-    ├── style.css              # Dashboard layout & responsiveness system
-    └── vite.config.js         # Bundler config
-```
+### 🗃️ Ops Command Profile Center
+- **Analytics Trackers**: Counters tracking queries, exports, uploads, and share logs.
+- **Past Session Switching**: Instantly reloads up to 20 past CSV sessions (reloads charts, maps, and logistics).
+- **System Preferences**: Toggles for theme color, default voice language, and audio master cues.
+
+### 📊 Interactive Data Explorer & Inline CRUD Edits
+- **Inline Double-Click Edits**: Edit cell values directly within the spreadsheet table. Integrates optimistic UI rendering, toast feedback, and auto-sync to both local SQLite cache and Firestore room triggers.
+- **Interactive Sorting & Search**: Click-to-sort columns (alphabetic/numeric sorting) and instant client-side query filtering across tables.
 
 ---
 
-## 🚀 8. Setup & Installation
+## 🛠️ Technical Stack & Architecture
+
+- **Frontend**: React (Vite), `@react-google-maps/api`, `vite-plugin-pwa` (Service Workers), IndexedDB, Recharts, Phosphor Icons, custom vanilla HSL design tokens.
+- **Backend**: Python (Flask), Google OR-Tools (GLOP Linear Solver), Google Maps Geocoding API, Google Generative AI SDK (Gemini 2.5/2.0 API), Firebase Admin SDK (Cloud Firestore), SQLite.
+
+---
+
+## 🚀 Installation & Setup
 
 ### Prerequisites
-*   Python 3.10+
-*   Node.js 18+
-*   Google Cloud Platform (GCP) Project with Vertex AI API enabled
-*   Firebase Project (Auth & Firestore enabled)
+- Python 3.9+
+- Node.js 18+
+- Google Gemini API Key
+- Firebase Service Account Key
 
-### Backend Configuration
+### Installation Steps
 
-1.  Navigate to the backend directory:
-    ```bash
-    cd backend
-    ```
-2.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  Authenticate with Google Cloud (for Vertex AI API access):
-    ```bash
-    gcloud auth application-default login
-    ```
-4.  Configure environment variables by creating `.env`:
-    ```ini
-    GCP_PROJECT_ID=your_gcp_project_id_here
-    GCP_LOCATION=global
-    GEMINI_MODEL=gemini-3.5-flash
-    FIREBASE_PROJECT_ID=your_firebase_project_id_here
-    FIREBASE_SERVICE_ACCOUNT_KEY_PATH=/absolute/path/to/serviceAccountKey.json
-    ```
-4.  Run the application:
-    ```bash
-    python app.py
-    ```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/stuti-debug/google-solutions.git
+   cd google-solutions
+   ```
 
-### Frontend Configuration
+2. **Backend Setup:**
+   ```bash
+   # Create and activate virtual environment
+   python -m venv venv
+   source venv/bin/activate
 
-1.  Navigate to the frontend directory:
-    ```bash
-    cd ../frontend
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Create `.env.local` containing your Firebase Web Client configs:
-    ```ini
-    VITE_FIREBASE_API_KEY=your_api_key
-    VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-    VITE_FIREBASE_PROJECT_ID=your_project_id
-    VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-    VITE_FIREBASE_APP_ID=your_app_id
-    ```
-4.  Run the Vite development server:
-    ```bash
-    npm run dev
-    ```
+   # Install dependencies
+   pip install -r requirements.txt
+
+   # Configure environment variables
+   cp .env.example .env
+   # Add your GEMINI_API_KEY and FIREBASE_CREDENTIALS path to .env
+   ```
+
+3. **Frontend Setup:**
+   ```bash
+   npm install
+   ```
+
+4. **Running the Applications:**
+   ```bash
+   # Run the backend server (Flask)
+   python app.py
+
+   # In a new terminal tab, run the frontend development server
+   npm run dev
+   ```
+
+5. **Access the application:**
+   - Flask Server: `http://localhost:8000`
+   - Vite React Dev Server: `http://localhost:5173` (or `http://localhost:5174`)
 
 ---
 
-## 📊 9. Core API Endpoints
-
-All secure endpoints require the Authorization header: `Authorization: Bearer <firebase_id_token>`
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/clean` | Uploads messy dataset, invokes Gemini to detect schema, cleans data, writes to Firestore. |
-| `GET` | `/status/<job_id>` | Checks dataset cleaning job execution status. |
-| `POST` | `/query` | Executes natural language queries against the cleaned dataset using Gemini. |
-| `GET` | `/data/<session_id>` | Fetches all cleaned beneficiary, inventory, or donor records. |
-| `GET` | `/sitrep/<session_id>` | Generates a high-level Situation Report summary. |
+## 📂 Project Structure
+```
+google-solutions/
+│
+├── core/                  # Security, Firebase, and SQLite configs
+├── routes/                # Flask blueprints (clean, data, alerts, priority, match, forecast, sitrep)
+├── services/              # Gemini AI Mapper and session managers
+├── src/                   # React Frontend source
+│   ├── components/        # UI views (MapView, QueryChat, Logistics, Profile, DashboardTabs)
+│   ├── hooks/             # Custom React hooks (useDashboardMetrics)
+│   └── utils/             # Exporters, share handlers, and analytics trackers
+├── style.css              # Glassmorphic layout styling rules
+├── app.py                 # Main Flask server entry point
+├── cleaning_pipeline.py   # CLI version of the AI cleaning pipeline
+└── package.json           # Frontend dependencies
+```
 
 ---
 
-## 📄 10. License
-
-This project is licensed under the MIT License. See `LICENSE` for details.
+## 🔒 Privacy & Security
+- **In-Memory Processing**: Cleaning pipelines process data in-memory to prevent leaks.
+- **Secure Sessions**: User context and session history are securely saved under sandboxed local storage keys.
 
 ---
-**CrisisGrid** | *Google Solution Challenge 2026 Submission*
+
+## 📄 License
+Licensed under the MIT License. See `LICENSE` for details.
+
+---
+**CrisisGrid** | *Google Solution Challenge 2026*

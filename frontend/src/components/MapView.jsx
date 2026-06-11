@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import toast from 'react-hot-toast';
 import { useAppContext } from '../AppContext';
 import { apiFetch } from '../utils/api';
+import { queueRequest } from '../utils/indexed_db_sync';
 
 const containerStyle = {
   width: '100%',
@@ -152,27 +154,43 @@ const MapView = () => {
 
   const handleSavePin = async (lat, lng) => {
     if (!sessionId || !pinModalLocation) return;
+    
+    const url = `${API_BASE_URL}/priority/${sessionId}/override`;
+    const payload = {
+      location: pinModalLocation.location,
+      lat,
+      lng
+    };
+
+    if (!navigator.onLine) {
+      queueRequest(url, 'POST', payload, 'geocoding');
+      toast.success(`Offline: Position cached locally for ${pinModalLocation.location}`);
+      setPinModalOpen(false);
+      setPinModalLocation(null);
+      return;
+    }
+
     try {
-      const response = await apiFetch(`${API_BASE_URL}/priority/${sessionId}/override`, {
+      const response = await apiFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: pinModalLocation.location,
-          lat,
-          lng
-        })
+        body: JSON.stringify(payload)
       });
       const data = await response.json();
       if (data.status === 'success') {
+        toast.success(`Position set for ${pinModalLocation.location}`);
         setPinModalOpen(false);
         setPinModalLocation(null);
         fetchPriorities();
       } else {
-        alert("Failed to save location override: " + data.message);
+        toast.error(data.message || 'Failed to save position.');
       }
     } catch (err) {
-      console.error(err);
-      alert("Error saving location override");
+      console.warn('Geocoding override failed, queueing offline:', err);
+      queueRequest(url, 'POST', payload, 'geocoding');
+      toast.success(`Saved locally. Will sync when online.`);
+      setPinModalOpen(false);
+      setPinModalLocation(null);
     }
   };
 

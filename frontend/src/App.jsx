@@ -16,6 +16,12 @@ function App() {
   const { currentScreen, user, loading, navigate } = useAppContext();
 
   React.useEffect(() => {
+    import('./utils/indexed_db_sync').then(({ setupOfflineSync }) => {
+      setupOfflineSync();
+    });
+  }, []);
+
+  React.useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();

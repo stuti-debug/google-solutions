@@ -465,3 +465,31 @@ def export_csv(session_id: str):
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@data_bp.route('/data/update/<session_id>', methods=['PUT', 'POST'])
+def update_row(session_id: str):
+    try:
+        validate_session_id(session_id)
+        
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
+
+        payload = request.json or {}
+        row_index = payload.get("row_index")
+        updated_row = payload.get("updated_row")
+        
+        if row_index is None or not isinstance(updated_row, dict):
+            return jsonify({"code": "BAD_REQUEST", "message": "Missing 'row_index' or 'updated_row'."}), 400
+            
+        success = store.update_session_row(session_id, int(row_index), updated_row)
+        if not success:
+            return jsonify({"code": "NOT_FOUND", "message": "Row or session not found."}), 404
+            
+        return jsonify({"success": True, "message": "Row updated successfully."})
+        
+    except ValueError as exc:
+        return jsonify({"code": "INVALID_SESSION", "message": str(exc)}), 400
+    except Exception as exc:
+        print(f"Failed to update row: {exc}")
+        return jsonify({"code": "INTERNAL_ERROR", "message": "Failed to update row."}), 500

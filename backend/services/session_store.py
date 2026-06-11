@@ -299,7 +299,145 @@ class SessionStore:
                         session_id,
                     ),
                 )
+        
+        # Sync metadata to Cloud Firestore for real-time multiplayer coordination updates
+        try:
+            from core.firebase import get_db
+            db = get_db()
+            db.collection("sessions").document(session_id).set({
+                "session_id": session_id,
+                "file_type": session_file_type,
+                "record_count": int(len(df)),
+                "columns": columns,
+                "dtypes": dtypes,
+                "profile": profile,
+                "summary": combined_summary,
+                "updated_at": now
+            }, merge=True)
+        except Exception as fe:
+            print(f"Firestore session sync failed: {fe}")
+
         return session_id
+
+    def update_session_row(self, session_id: str, row_index: int, updated_row: dict) -> bool:
+        with self._connect() as conn:
+            existing = conn.execute(
+                "SELECT file_type, row_json FROM session_rows WHERE session_id = ? AND row_index = ?",
+                (session_id, row_index)
+            ).fetchone()
+            if not existing:
+                return False
+
+            current_row = json.loads(existing["row_json"])
+            # Remove any internal fields from incoming updated_row to keep data clean
+            for k in list(updated_row.keys()):
+                if k.startswith("_") or k == "row_index" or k == "session_id" or k == "file_type":
+                    updated_row.pop(k, None)
+
+            current_row.update(updated_row)
+
+            # Update SQLite
+            conn.execute(
+                "UPDATE session_rows SET row_json = ? WHERE session_id = ? AND row_index = ?",
+                (json.dumps(current_row, ensure_ascii=False), session_id, row_index)
+            )
+
+            # Recalculate metadata
+            all_rows = conn.execute(
+                """
+                SELECT file_type, row_json FROM session_rows
+                WHERE session_id = ?
+                ORDER BY row_index ASC
+                """,
+                (session_id,),
+            ).fetchall()
+
+            all_records = [json.loads(r["row_json"]) for r in all_rows]
+            file_types = sorted({(r["file_type"] or "unknown") for r in all_rows}) or ["unknown"]
+            df = pd.DataFrame(all_records)
+            columns = list(df.columns)
+            dtypes = {col: str(df[col].dtype) for col in columns}
+            profile = self._build_profile(df)
+
+            session_meta = conn.execute(
+                "SELECT summary_json FROM sessions WHERE session_id = ?",
+                (session_id,)
+            ).fetchone()
+            existing_summary = json.loads(session_meta["summary_json"]) if session_meta and session_meta["summary_json"] else {}
+            record_counts_by_type = self._count_rows_by_type(conn, session_id)
+            existing_summary["recordCountsByType"] = record_counts_by_type
+            existing_summary["fileTypes"] = file_types
+
+            session_file_type = file_types[0] if len(file_types) == 1 else "multiple"
+
+            conn.execute(
+                """
+                UPDATE sessions
+                SET file_type = ?, record_count = ?, columns_json = ?, dtypes_json = ?,
+                    profile_json = ?, summary_json = ?
+                WHERE session_id = ?
+                """,
+                (
+                    session_file_type,
+                    int(len(df)),
+                    json.dumps(columns, ensure_ascii=False),
+                    json.dumps(dtypes, ensure_ascii=False),
+                    json.dumps(profile, ensure_ascii=False),
+                    json.dumps(existing_summary, ensure_ascii=False),
+                    session_id,
+                ),
+            )
+
+        # Sync update to Cloud Firestore
+        now = self._now()
+        try:
+            from core.firebase import get_db
+            db = get_db()
+            if db is not None:
+                # 1. Update the row doc in the target collection
+                normalized_type = str(existing["file_type"] or "unknown").lower().strip()
+                target_collection = "beneficiaries"
+                if normalized_type in {"inventory", "inventories"}:
+                    target_collection = "inventory"
+                elif normalized_type in {"donor", "donors"}:
+                    target_collection = "donors"
+
+                docs = db.collection(target_collection).where("session_id", "==", session_id).where("row_index", "==", row_index).limit(1).stream()
+                doc_found = False
+                from firebase_admin import firestore
+                for doc in docs:
+                    doc_found = True
+                    payload = dict(current_row or {})
+                    payload["session_id"] = session_id
+                    payload["file_type"] = existing["file_type"]
+                    payload["row_index"] = row_index
+                    payload["synced_at"] = firestore.SERVER_TIMESTAMP
+                    db.collection(target_collection).document(doc.id).set(payload, merge=True)
+
+                if not doc_found:
+                    doc_ref = db.collection(target_collection).document()
+                    payload = dict(current_row or {})
+                    payload["session_id"] = session_id
+                    payload["file_type"] = existing["file_type"]
+                    payload["row_index"] = row_index
+                    payload["synced_at"] = firestore.SERVER_TIMESTAMP
+                    doc_ref.set(payload)
+
+                # 2. Update the session metadata doc in firestore to trigger real-time updates for other users
+                db.collection("sessions").document(session_id).set({
+                    "session_id": session_id,
+                    "file_type": session_file_type,
+                    "record_count": int(len(df)),
+                    "columns": columns,
+                    "dtypes": dtypes,
+                    "profile": profile,
+                    "summary": existing_summary,
+                    "updated_at": now
+                }, merge=True)
+        except Exception as fe:
+            print(f"Firestore session row sync failed: {fe}")
+
+        return True
 
     def get_session_meta(self, session_id: str) -> Optional[Dict[str, Any]]:
         with self._connect() as conn:
@@ -341,7 +479,7 @@ class SessionStore:
             ).fetchone()["c"]
             rows = conn.execute(
                 f"""
-                SELECT file_type, row_json FROM session_rows
+                SELECT file_type, row_index, row_json FROM session_rows
                 {where_clause}
                 ORDER BY row_index ASC
                 LIMIT ? OFFSET ?
@@ -358,6 +496,7 @@ class SessionStore:
                 {
                     **json.loads(r["row_json"]),
                     "_file_type": r["file_type"],
+                    "_row_index": r["row_index"],
                 }
                 for r in rows
             ],
@@ -369,7 +508,7 @@ class SessionStore:
         limit: Optional[int] = None,
         file_type: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        query = "SELECT file_type, row_json FROM session_rows WHERE session_id = ?"
+        query = "SELECT file_type, row_index, row_json FROM session_rows WHERE session_id = ?"
         params_list: List[Any] = [session_id]
         normalized_type = (file_type or "").lower().strip()
         if normalized_type and normalized_type != "all":
@@ -386,6 +525,7 @@ class SessionStore:
             {
                 **json.loads(r["row_json"]),
                 "_file_type": r["file_type"],
+                "_row_index": r["row_index"],
             }
             for r in rows
         ]

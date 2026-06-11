@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useAppContext } from '../AppContext';
 import { apiFetch } from '../utils/api';
+import { queueRequest } from '../utils/indexed_db_sync';
 
 const TAB_CONFIG = {
   beneficiaries: {
@@ -44,7 +46,66 @@ const DashboardTabs = () => {
   const [records, setRecords] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingCell, setEditingCell] = useState(null); // { rowIndex, field }
+  const [editValue, setEditValue] = useState('');
   const itemsPerPage = 10;
+
+  const handleCellSave = (row, header, newValue) => {
+    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
+    if (!sessionId) {
+      setEditingCell(null);
+      return;
+    }
+
+    const updatedValue = newValue.trim();
+    if (String(row[header] || '').trim() === updatedValue) {
+      setEditingCell(null);
+      return;
+    }
+
+    // Optimistic UI update
+    const updatedRecords = records.map((r) => {
+      if (r._row_index === row._row_index) {
+        return { ...r, [header]: updatedValue };
+      }
+      return r;
+    });
+    setRecords(updatedRecords);
+    setEditingCell(null);
+
+    const url = `${API_BASE_URL}/data/update/${sessionId}`;
+    const payload = {
+      row_index: row._row_index,
+      updated_row: { [header]: updatedValue },
+    };
+
+    if (!navigator.onLine) {
+      queueRequest(url, 'PUT', payload, 'cell_update');
+      toast.success("Offline: Change saved locally. Will sync when online.");
+      return;
+    }
+
+    apiFetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) {
+          toast.error(`Failed to update: ${data.message}`);
+        } else {
+          toast.success("Cell updated successfully!");
+        }
+      })
+      .catch((err) => {
+        console.warn('Cell update fetch failed, queueing offline:', err);
+        queueRequest(url, 'PUT', payload, 'cell_update');
+        toast.success("Saved locally. Will sync when connection is restored.");
+      });
+  };
 
   // Reset sorting and searching on tab change
   useEffect(() => {
@@ -243,14 +304,53 @@ const DashboardTabs = () => {
                 {visibleRecords.map((row, i) => (
                   <tr key={i} className="table-row-animate" style={{ animationDelay: `${i * 30}ms` }}>
                     <td className="row-number-col">{startIndex + i + 1}</td>
-                    {headers.map((h, j) => (
-                      <td key={j}>
-                        {row[h] != null && row[h] !== ''
-                          ? <span className="cell-value">{row[h]}</span>
-                          : <span className="cell-empty">—</span>
-                        }
-                      </td>
-                    ))}
+                    {headers.map((h, j) => {
+                      const isEditing = editingCell && editingCell.rowIndex === row._row_index && editingCell.field === h;
+                      return (
+                        <td 
+                          key={j}
+                          onDoubleClick={() => {
+                            setEditingCell({ rowIndex: row._row_index, field: h });
+                            setEditValue(row[h] != null ? String(row[h]) : '');
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() => handleCellSave(row, h, editValue)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCellSave(row, h, editValue);
+                                } else if (e.key === 'Escape') {
+                                  setEditingCell(null);
+                                }
+                              }}
+                              autoFocus
+                              className="inline-cell-input"
+                              style={{
+                                width: '100%',
+                                padding: '4px 8px',
+                                border: '1px solid var(--tab-accent, #0d7377)',
+                                borderRadius: '4px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(5px)',
+                                color: 'var(--clr-text, #ffffff)',
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                                fontSize: '0.85rem'
+                              }}
+                            />
+                          ) : (
+                            row[h] != null && row[h] !== ''
+                              ? <span className="cell-value">{row[h]}</span>
+                              : <span className="cell-empty">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

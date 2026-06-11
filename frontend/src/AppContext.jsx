@@ -8,7 +8,8 @@ import React, {
 } from 'react';
 import toast from 'react-hot-toast';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, googleProvider } from './firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, googleProvider, db } from './firebase';
 import { apiFetch } from './utils/api';
 
 export const AppContext = createContext();
@@ -360,6 +361,36 @@ export const AppProvider = ({ children }) => {
 
     return () => unsubscribe();
   }, []);
+
+  // Subscribe to Cloud Firestore real-time session changes for multiplayer collaboration
+  useEffect(() => {
+    const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
+    if (!sessionId || !user) return;
+
+    const sessionDocRef = doc(db, 'sessions', sessionId);
+    const unsubscribe = onSnapshot(sessionDocRef, async (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        
+        // Fetch fresh rows from the database cache using apiFetch
+        try {
+          const typeEntries = await Promise.all(
+            ['beneficiary', 'inventory', 'donor'].map(async (fileType) => {
+              const res = await apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${fileType}`);
+              if (!res.ok) return [fileType, []];
+              const payload = await res.json();
+              return [fileType, payload.rows || []];
+            }),
+          );
+          setCleanedDataMap(Object.fromEntries(typeEntries));
+        } catch (err) {
+          console.error("Error updating real-time session sync:", err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [sessionData, user, API_BASE_URL]);
 
   const value = useMemo(
     () => ({
