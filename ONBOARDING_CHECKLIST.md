@@ -186,7 +186,7 @@
 ### Team Lead
 - Name: Ansh Pratap Singh
 - Email: anshpratapsingho0oo07@gmail.com
-- GitHub: @anshpratapsingh
+- GitHub: @ANSH0000007
 
 ### Technical Support
 - For API issues: Check Google Cloud Console
