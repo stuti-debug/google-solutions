@@ -57,6 +57,60 @@ const darkMapStyle = [
   { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] }
 ];
 
+const MapPinningModal = ({ isOpen, onClose, locationName, initialLat, initialLng, onSave, isDarkMode }) => {
+  const [pin, setPin] = useState({ lat: initialLat || 13.0827, lng: initialLng || 80.2707 });
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', 
+      zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)'
+    }}>
+      <div className="modal-content fade-in" style={{
+        background: 'var(--clr-surface)', padding: '1.5rem', borderRadius: '24px', 
+        width: '90%', maxWidth: '800px', height: '80vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.5)', border: '1px solid var(--glass-border)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div>
+            <h3 style={{ margin: 0, color: 'var(--clr-text)', fontSize: '1.4rem' }}>Pin Location: {locationName}</h3>
+            <p style={{ margin: '0.2rem 0 0 0', color: 'var(--clr-text-muted)', fontSize: '0.9rem' }}>
+              We couldn't automatically locate this area. Click on the map to pin it manually.
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'var(--clr-background)', border: '1px solid var(--glass-border)', color: 'var(--clr-text)', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ph ph-x" style={{ fontSize: '1.2rem' }}></i>
+          </button>
+        </div>
+        
+        <div style={{ flex: 1, borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--glass-border)', position: 'relative' }}>
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100%' }}
+            center={pin}
+            zoom={12}
+            onClick={(e) => setPin({ lat: e.latLng.lat(), lng: e.latLng.lng() })}
+            options={{
+              styles: isDarkMode ? darkMapStyle : lightMapStyle,
+              disableDefaultUI: true,
+              zoomControl: true,
+            }}
+          >
+            <Marker position={pin} animation={window.google.maps.Animation.DROP} />
+          </GoogleMap>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', gap: '1rem' }}>
+          <button className="btn secondary" onClick={onClose}>Cancel</button>
+          <button className="btn primary" onClick={() => onSave(pin.lat, pin.lng)}>
+            <i className="ph-fill ph-map-pin"></i> Confirm Location
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MapView = () => {
   const { API_BASE_URL, sessionData, mapFocusPriorityId, setMapFocusPriorityId } = useAppContext();
   const [priorities, setPriorities] = useState([]);
@@ -64,6 +118,8 @@ const MapView = () => {
   const [activeMarker, setActiveMarker] = useState(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinModalLocation, setPinModalLocation] = useState(null);
 
   const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
 
@@ -85,6 +141,38 @@ const MapView = () => {
       console.error('Failed to fetch map data', err);
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const handleOpenPinModal = (e, item) => {
+    e.stopPropagation();
+    setPinModalLocation(item);
+    setPinModalOpen(true);
+  };
+
+  const handleSavePin = async (lat, lng) => {
+    if (!sessionId || !pinModalLocation) return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/priority/${sessionId}/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: pinModalLocation.location,
+          lat,
+          lng
+        })
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        setPinModalOpen(false);
+        setPinModalLocation(null);
+        fetchPriorities();
+      } else {
+        alert("Failed to save location override: " + data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving location override");
     }
   };
 
@@ -218,16 +306,37 @@ const MapView = () => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                   <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--clr-text)' }}>{item.location}</h4>
-                  <span style={{ 
-                    background: `${getUrgencyColor(item.score)}15`, 
-                    color: getUrgencyColor(item.score),
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: '20px',
-                    fontSize: '0.7rem',
-                    fontWeight: 700
-                  }}>
-                    {item.score}/100
-                  </span>
+                  {item.needs_geocoding ? (
+                    <button 
+                      onClick={(e) => handleOpenPinModal(e, item)}
+                      style={{
+                        background: '#EF444422',
+                        color: '#EF4444',
+                        border: '1px solid #EF444455',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '20px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem'
+                      }}
+                    >
+                      <i className="ph-fill ph-map-pin"></i> Needs Pin
+                    </button>
+                  ) : (
+                    <span style={{ 
+                      background: `${getUrgencyColor(item.score)}15`, 
+                      color: getUrgencyColor(item.score),
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '20px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700
+                    }}>
+                      {item.score}/100
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--clr-text-muted)', marginBottom: '0.4rem' }}>
                   <i className="ph-fill ph-users text-primary"></i> <b>{item.affected}</b> civilians affected
@@ -312,9 +421,16 @@ const MapView = () => {
                   <i className="ph-fill ph-users text-primary"></i> <b>{activeMarker.affected}</b> affected
                 </div>
                 <hr style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '0.2rem 0' }} />
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--clr-text-muted)', lineHeight: 1.5 }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--clr-text-muted)', lineHeight: 1.5 }}>
                   {activeMarker.reasoning}
                 </p>
+                {activeMarker.needs_geocoding && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <button className="btn primary" style={{ width: '100%', fontSize: '0.85rem', padding: '0.5rem' }} onClick={(e) => handleOpenPinModal(e, activeMarker)}>
+                      <i className="ph-fill ph-map-pin"></i> Set Exact Location
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -332,6 +448,16 @@ const MapView = () => {
 
         </div>
       </div>
+      
+      <MapPinningModal 
+        isOpen={pinModalOpen} 
+        onClose={() => setPinModalOpen(false)} 
+        locationName={pinModalLocation?.location}
+        initialLat={pinModalLocation?.lat}
+        initialLng={pinModalLocation?.lng}
+        onSave={handleSavePin}
+        isDarkMode={isDarkMode}
+      />
     </section>
   );
 };

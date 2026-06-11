@@ -24,7 +24,8 @@ def _gather_session_context(session_id: str) -> Dict[str, Any]:
     inventory = store.get_session_rows(session_id, limit=200, file_type="inventory")
     donors = store.get_session_rows(session_id, limit=200, file_type="donor")
 
-    priorities = calculate_real_priorities(beneficiaries)
+    overrides = store.get_location_overrides(session_id)
+    priorities = calculate_real_priorities(beneficiaries, location_overrides=overrides)
     # Priority data (demo fallback)
     if not priorities:
         priorities = [

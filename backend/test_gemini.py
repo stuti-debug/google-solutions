@@ -1,13 +1,13 @@
 from services.ai_mapper import GeminiAIMapper
 
 
-def test_gemini_json_roundtrip() -> None:
+def test_gemini_generation() -> None:
     mapper = GeminiAIMapper()
-    models = list(mapper.client.models.list())
-    assert isinstance(models, list)
-    assert len(models) > 0
+    response = mapper.generate_text("Say 'Gemini test passed'. Keep it brief.")
+    print("Gemini Response:", response)
+    assert "passed" in response.lower()
 
 
 if __name__ == "__main__":
-    test_gemini_json_roundtrip()
-    print("Gemini test passed")
+    test_gemini_generation()
+    print("Gemini test passed successfully!")

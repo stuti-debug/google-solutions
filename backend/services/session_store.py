@@ -97,6 +97,39 @@ class SessionStore:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_rows_session ON session_rows(session_id, row_index)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_rows_type ON session_rows(session_id, file_type, row_index)")
 
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS location_overrides (
+                    session_id TEXT NOT NULL,
+                    location_name TEXT NOT NULL,
+                    lat REAL NOT NULL,
+                    lng REAL NOT NULL,
+                    PRIMARY KEY (session_id, location_name)
+                )
+                """
+            )
+
+    def save_location_override(self, session_id: str, location_name: str, lat: float, lng: float) -> None:
+        """Save a manual coordinate override for a specific location in a session."""
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO location_overrides (session_id, location_name, lat, lng)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(session_id, location_name) DO UPDATE SET lat=excluded.lat, lng=excluded.lng
+                """,
+                (session_id, location_name, lat, lng),
+            )
+
+    def get_location_overrides(self, session_id: str) -> Dict[str, Tuple[float, float]]:
+        """Retrieve all location overrides for a given session."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT location_name, lat, lng FROM location_overrides WHERE session_id = ?",
+                (session_id,)
+            ).fetchall()
+            return {row["location_name"]: (row["lat"], row["lng"]) for row in rows}
+
     def create_job(self, filename: str = "upload", user_id: Optional[str] = None) -> str:
         job_id = uuid.uuid4().hex
         now = self._now()

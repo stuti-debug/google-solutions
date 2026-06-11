@@ -16,8 +16,10 @@ def get_priority_scores(session_id):
         
         # Fetch beneficiaries from SQLite/Firestore
         beneficiaries = store.get_session_rows(session_id, file_type="beneficiary")
+        # Fetch location overrides
+        overrides = store.get_location_overrides(session_id)
         
-        priorities = calculate_real_priorities(beneficiaries)
+        priorities = calculate_real_priorities(beneficiaries, location_overrides=overrides)
         
         # Fallback to demo priorities if no beneficiary data has been uploaded in this session yet
         if not priorities:
@@ -71,3 +73,33 @@ def get_priority_scores(session_id):
 
     except Exception as e:
         return jsonify({"code": "PRIORITY_ERROR", "message": str(e)}), 500
+
+@priority_bp.route('/priority/<session_id>/override', methods=['POST'])
+def save_location_override(session_id):
+    try:
+        validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
+
+        data = request.json or {}
+        location = data.get("location")
+        lat = data.get("lat")
+        lng = data.get("lng")
+
+        if not location or lat is None or lng is None:
+            return jsonify({"code": "INVALID_INPUT", "message": "Location, lat, and lng are required."}), 400
+
+        try:
+            lat = float(lat)
+            lng = float(lng)
+        except ValueError:
+            return jsonify({"code": "INVALID_INPUT", "message": "lat and lng must be numbers."}), 400
+
+        store.save_location_override(session_id, location, lat, lng)
+        
+        return jsonify({"status": "success", "message": "Location override saved successfully."})
+
+    except Exception as e:
+        return jsonify({"code": "OVERRIDE_ERROR", "message": str(e)}), 500

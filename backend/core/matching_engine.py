@@ -1,7 +1,7 @@
 import re
 import random
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 # Coordinates for known/fallback locations in Chennai
 CHENNAI_COORDS = {
@@ -43,8 +43,10 @@ def map_need_to_category(need: str) -> str:
         return "Hygiene"
     return "General"
 
-def calculate_real_priorities(beneficiaries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def calculate_real_priorities(beneficiaries: List[Dict[str, Any]], location_overrides: Dict[str, Tuple[float, float]] = None) -> List[Dict[str, Any]]:
     """Calculate dynamic priority scores based on beneficiary need types and counts."""
+    if location_overrides is None:
+        location_overrides = {}
     if not beneficiaries:
         return []
 
@@ -114,11 +116,14 @@ def calculate_real_priorities(beneficiaries: List[Dict[str, Any]]) -> List[Dict[
 
         # Coordinates lookup
         norm_village = village.lower().strip()
-        lat, lng = CHENNAI_COORDS.get(norm_village, (13.0827, 80.2707))
-        # Add a tiny random jitter if it falls back to Chennai center to separate markers
-        if (lat, lng) == (13.0827, 80.2707):
-            lat += random.uniform(-0.015, 0.015)
-            lng += random.uniform(-0.015, 0.015)
+        needs_geocoding = False
+        
+        if village in location_overrides:
+            lat, lng = location_overrides[village]
+        else:
+            lat, lng = CHENNAI_COORDS.get(norm_village, (13.0827, 80.2707))
+            if (lat, lng) == (13.0827, 80.2707):
+                needs_geocoding = True
 
         priorities.append({
             "id": f"pri-{pri_idx}",
@@ -128,7 +133,8 @@ def calculate_real_priorities(beneficiaries: List[Dict[str, Any]]) -> List[Dict[
             "affected": total_affected,
             "reasoning": reasoning,
             "lat": round(lat, 5),
-            "lng": round(lng, 5)
+            "lng": round(lng, 5),
+            "needs_geocoding": needs_geocoding
         })
         pri_idx += 1
 
