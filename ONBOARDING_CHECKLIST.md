@@ -184,9 +184,9 @@
 ## Contact Information
 
 ### Team Lead
-- Name: [Team Lead Name]
-- Email: [team.lead@example.com]
-- GitHub: [@teamlead]
+- Name: Ansh Pratap Singh
+- Email: anshpratapsingho0oo07@gmail.com
+- GitHub: @anshpratapsingh
 
 ### Technical Support
 - For API issues: Check Google Cloud Console
