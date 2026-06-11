@@ -78,6 +78,23 @@ def _execute_local_query(session_id: str, filters: List[List[Any]], limit: int =
                 if str(row_val).strip().lower() != str(value).strip().lower():
                     match = False
                     break
+            elif operator == "!=":
+                if str(row_val).strip().lower() == str(value).strip().lower():
+                    match = False
+                    break
+            elif operator == "contains":
+                if str(value).strip().lower() not in str(row_val).strip().lower():
+                    match = False
+                    break
+            elif operator == "in":
+                if isinstance(value, list):
+                    if str(row_val).strip().lower() not in [str(v).strip().lower() for v in value]:
+                        match = False
+                        break
+                else:
+                    if str(row_val).strip().lower() != str(value).strip().lower():
+                        match = False
+                        break
             elif operator == ">":
                 try:
                     if float(row_val) <= float(value): match = False; break
@@ -133,6 +150,7 @@ def _plan_query_with_context(mapper: GeminiAIMapper, question: str, all_meta: Li
         "instructions": [
             "Pick the single most relevant collection for this question",
             "Use ONLY column names that exist in that dataset's columns list",
+            "Prefer 'contains' over '==' for text matching to improve robustness",
             "For filter values, match the casing/format seen in sample_rows",
             "Return strict JSON only, no markdown",
         ],
@@ -211,13 +229,11 @@ def query_data():
         try:
             query_plan = _plan_query_with_context(mapper, question, all_meta, sample_rows_map)
         except Exception as e:
-            # Fallback: use first session with no filters
-            query_plan = {
-                "collection": FILE_TYPE_TO_COLLECTION.get(all_meta[0].get("file_type", ""), "beneficiaries"),
-                "filters": [],
-                "limit": 50,
-                "explanation": "Fallback: returning all records from the first dataset"
-            }
+            return jsonify({
+                "answer": "I'm having trouble analyzing the data to answer your question right now. Could you please rephrase it or try again later?",
+                "query": None,
+                "source": "system"
+            })
 
         # Resolve which session_id to query based on the collection Gemini picked
         target_collection = str(query_plan.get("collection", "")).strip().lower()
@@ -232,17 +248,23 @@ def query_data():
                 target_meta = meta
                 break
         
-        # Fallback to first session if no match
+        # Explicitly fail if dataset not found instead of falling back to wrong data
         if not target_session_id:
-            target_session_id = all_meta[0]["session_id"]
-            target_meta = all_meta[0]
+            return jsonify({
+                "answer": f"I cannot answer this question because the required '{target_file_type}' dataset has not been uploaded yet. Please upload it first.",
+                "query": None,
+                "source": "system"
+            })
 
         # Extract and validate filters
         raw_filters = query_plan.get("filters", [])
         valid_filters = []
+        valid_columns = set(target_meta.get("columns", []))
         for f in raw_filters:
             if isinstance(f, (list, tuple)) and len(f) == 3:
                 field, op, value = str(f[0]).strip(), str(f[1]).strip(), f[2]
+                if field not in valid_columns:
+                    continue # Drop hallucinated columns to prevent full filter failure
                 if FIRESTORE_FIELD_PATTERN.match(field) and op in ALLOWED_FIRESTORE_OPERATORS:
                     valid_filters.append([field, op, value])
 
@@ -251,8 +273,9 @@ def query_data():
         # Execute against the correct session
         rows = _execute_local_query(target_session_id, valid_filters, limit=limit)
         
-        # Generate natural language answer
-        prompt = f"Question: {question}\nData ({len(rows)} records): {json.dumps(rows[:10])}\nAnswer concisely based on the data. If no data, say so."
+        # Generate natural language answer using strictly capped context
+        sample_rows_json = json.dumps(rows[:10])
+        prompt = f"Question: {question}\nTotal records matching your query: {len(rows)}. Here is a sample of the top 10 entries: {sample_rows_json}\nAnswer concisely based on the data. If no data, say so."
         answer = mapper.generate_text(prompt=prompt)
 
         return jsonify({

@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
-from typing import Any
 from flask import Response, request, jsonify
+import firebase_admin
 from firebase_admin import auth as firebase_auth
 
 # --- Security Constants ---
@@ -10,7 +10,7 @@ SESSION_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 JOB_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 FIRESTORE_COLLECTION_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,127}$")
 FIRESTORE_FIELD_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
-ALLOWED_FIRESTORE_OPERATORS = {"==", ">", "<", ">=", "<=", "!=", "array-contains"}
+ALLOWED_FIRESTORE_OPERATORS = {"==", ">", "<", ">=", "<=", "!=", "array-contains", "contains", "in"}
 
 def security_headers_middleware(response: Response) -> Response:
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -48,7 +48,13 @@ def require_auth():
         
     token = auth_header.split(" ")[1]
     try:
-        decoded_token = firebase_auth.verify_id_token(token)
+        # Initialize an app instance for auth verification if not exists
+        try:
+            auth_app = firebase_admin.get_app('auth_app')
+        except ValueError:
+            auth_app = firebase_admin.initialize_app(options={'projectId': 'crisisgrid-web'}, name='auth_app')
+            
+        decoded_token = firebase_auth.verify_id_token(token, app=auth_app)
         request.user = decoded_token
     except Exception as e:
         return jsonify({"code": "UNAUTHORIZED", "message": f"Invalid token: {e}"}), 401

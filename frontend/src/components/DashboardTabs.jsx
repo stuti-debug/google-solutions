@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 
 const TAB_CONFIG = {
   beneficiaries: {
@@ -55,9 +56,9 @@ const DashboardTabs = () => {
     const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
     const requestedType = TAB_CONFIG[activeTab].fileType;
 
-    if (cleanedData?.documentsByType?.[requestedType]) {
+    if (cleanedData?.documentsByType?.[requestedType] && cleanedData.documentsByType[requestedType].length > 0) {
       setRecords(cleanedData.documentsByType[requestedType]);
-    } else if (cleanedData?.cleanedDocuments && cleanedData.fileType !== 'multiple') {
+    } else if (cleanedData?.cleanedDocuments && cleanedData.cleanedDocuments.length > 0 && cleanedData.fileType !== 'multiple') {
       setRecords(
         cleanedData.cleanedDocuments.filter((row) => !row._file_type || row._file_type === requestedType),
       );

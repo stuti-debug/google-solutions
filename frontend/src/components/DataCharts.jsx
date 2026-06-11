@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Legend
 } from 'recharts';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 
 // Shared hook to parse and memoize charts data from active session
 export const useChartData = () => {
@@ -13,8 +14,6 @@ export const useChartData = () => {
     let barData = [];
     let pieData = [];
 
-    const rawDocs = cleanedData?.cleanedDocuments || [];
-    
     // Fallback Demo Data for Hackathon
     const demoBarData = [
       { name: 'Chetpet Camp', affected: 1200 },
@@ -30,57 +29,47 @@ export const useChartData = () => {
       { name: 'Blankets', value: 150, color: '#FF8042' },
     ];
 
-    if (rawDocs.length === 0) {
-      return { bar: demoBarData, pie: demoPieData };
-    }
-
-    // Attempt to aggregate real data for Bar Chart (Locations)
-    const locationCounts = {};
-    const categoryCounts = {};
-
-    rawDocs.forEach(row => {
-      // Find a location-like key
-      const locKey = Object.keys(row).find(k => k.toLowerCase().includes('district') || k.toLowerCase().includes('village') || k.toLowerCase().includes('location') || k.toLowerCase().includes('camp'));
-      if (locKey && row[locKey]) {
-        const loc = row[locKey];
-        // Try to find a numeric affected/quantity value, otherwise just count 1
-        const numKey = Object.keys(row).find(k => k.toLowerCase().includes('affected') || k.toLowerCase().includes('quantity'));
-        const val = numKey && !isNaN(row[numKey]) ? Number(row[numKey]) : 1;
-        locationCounts[loc] = (locationCounts[loc] || 0) + val;
-      }
-
-      // Find an item/category key for Pie Chart
-      const itemKey = Object.keys(row).find(k => k.toLowerCase() === 'item' || k.toLowerCase() === 'category' || k.toLowerCase().includes('need'));
-      if (itemKey && row[itemKey]) {
-        const item = row[itemKey];
-        const numKey = Object.keys(row).find(k => k.toLowerCase().includes('quantity') || k.toLowerCase().includes('amount'));
-        const val = numKey && !isNaN(row[numKey]) ? Number(row[numKey]) : 1;
-        categoryCounts[item] = (categoryCounts[item] || 0) + val;
-      }
-    });
-
-    // Format Bar Data
-    Object.keys(locationCounts).slice(0, 5).forEach(loc => {
-      barData.push({ name: loc.substring(0, 15), affected: locationCounts[loc] });
-    });
-
-    // Format Pie Data
-    const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7'];
-    Object.keys(categoryCounts).slice(0, 5).forEach((item, idx) => {
-      pieData.push({ name: item, value: categoryCounts[item], color: colors[idx % colors.length] });
-    });
-
-    // If parsing failed (no recognizable columns), use demo
-    if (barData.length === 0) barData = demoBarData;
-    if (pieData.length === 0) pieData = demoPieData;
-
-    return { bar: barData, pie: pieData };
-  }, [cleanedData]);
+    return { bar: demoBarData, pie: demoPieData };
+  }, []);
 };
 
-// 1. Affected Population by Location (Bar Chart)
 export const AffectedPopulationChart = () => {
-  const chartData = useChartData();
+  const { sessionData, API_BASE_URL } = useAppContext();
+  const [chartData, setChartData] = React.useState({ bar: [], pie: [] });
+  const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
+
+  React.useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    apiFetch(`${API_BASE_URL}/data/${sessionId}?limit=500`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        const rawDocs = data.rows || [];
+        if (rawDocs.length === 0) return;
+
+        const locationCounts = {};
+        rawDocs.forEach(row => {
+          const locKey = Object.keys(row).find(k => k.toLowerCase().includes('district') || k.toLowerCase().includes('village') || k.toLowerCase().includes('location') || k.toLowerCase().includes('camp'));
+          if (locKey && row[locKey]) {
+            const loc = row[locKey];
+            const numKey = Object.keys(row).find(k => k.toLowerCase().includes('affected') || k.toLowerCase().includes('quantity'));
+            const val = numKey && !isNaN(row[numKey]) ? Number(row[numKey]) : 1;
+            locationCounts[loc] = (locationCounts[loc] || 0) + val;
+          }
+        });
+
+        let barData = [];
+        Object.keys(locationCounts).slice(0, 5).forEach(loc => {
+          barData.push({ name: String(loc).substring(0, 15), affected: locationCounts[loc] });
+        });
+        if (barData.length > 0) setChartData(prev => ({ ...prev, bar: barData }));
+      });
+    return () => { cancelled = true; };
+  }, [sessionId, API_BASE_URL]);
+
+  const defaultData = useChartData();
+  const displayData = chartData.bar.length > 0 ? chartData.bar : defaultData.bar;
 
   return (
     <div className="chart-card" style={{ background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--shadow-sm)', width: '100%' }}>
@@ -90,7 +79,7 @@ export const AffectedPopulationChart = () => {
       <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', marginTop: '0.2rem', marginBottom: '1rem' }}>Civilians affected by relief hotspot locations.</p>
       <div style={{ width: '100%', height: 250 }}>
         <ResponsiveContainer>
-          <BarChart data={chartData.bar} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <BarChart data={displayData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--clr-text-muted)' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: 'var(--clr-text-muted)' }} axisLine={false} tickLine={false} />
             <Tooltip 
@@ -98,7 +87,7 @@ export const AffectedPopulationChart = () => {
               contentStyle={{ background: 'var(--clr-bg)', borderRadius: '8px', border: '1px solid var(--clr-border)', color: 'var(--clr-text)' }}
             />
             <Bar dataKey="affected" radius={[4, 4, 0, 0]}>
-              {chartData.bar.map((entry, index) => (
+              {displayData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill="var(--clr-primary)" />
               ))}
             </Bar>
@@ -111,7 +100,44 @@ export const AffectedPopulationChart = () => {
 
 // 2. Inventory Breakdown Chart (Pie Chart) - Default Export
 const InventoryBreakdownChart = () => {
-  const chartData = useChartData();
+  const { sessionData, API_BASE_URL } = useAppContext();
+  const [chartData, setChartData] = React.useState({ pie: [] });
+  const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
+
+  React.useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    apiFetch(`${API_BASE_URL}/data/${sessionId}?limit=500`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        const rawDocs = data.rows || [];
+        if (rawDocs.length === 0) return;
+
+        const categoryCounts = {};
+        rawDocs.forEach(row => {
+          const itemKey = Object.keys(row).find(k => k.toLowerCase() === 'item' || k.toLowerCase() === 'category' || k.toLowerCase().includes('need'));
+          if (itemKey && row[itemKey]) {
+            const item = row[itemKey];
+            const numKey = Object.keys(row).find(k => k.toLowerCase().includes('quantity') || k.toLowerCase().includes('amount'));
+            const val = numKey && !isNaN(row[numKey]) ? Number(row[numKey]) : 1;
+            categoryCounts[item] = (categoryCounts[item] || 0) + val;
+          }
+        });
+
+        let pieData = [];
+        const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7'];
+        Object.keys(categoryCounts).slice(0, 5).forEach((item, idx) => {
+          pieData.push({ name: String(item), value: categoryCounts[item], color: colors[idx % colors.length] });
+        });
+
+        if (pieData.length > 0) setChartData({ pie: pieData });
+      });
+    return () => { cancelled = true; };
+  }, [sessionId, API_BASE_URL]);
+
+  const defaultData = useChartData();
+  const displayData = chartData.pie.length > 0 ? chartData.pie : defaultData.pie;
 
   return (
     <div className="chart-card" style={{ background: 'var(--clr-surface)', border: '1px solid var(--glass-border)', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--shadow-sm)', width: '100%' }}>
@@ -123,7 +149,7 @@ const InventoryBreakdownChart = () => {
         <ResponsiveContainer>
           <PieChart>
             <Pie
-              data={chartData.pie}
+              data={displayData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -132,7 +158,7 @@ const InventoryBreakdownChart = () => {
               dataKey="value"
               stroke="none"
             >
-              {chartData.pie.map((entry, index) => (
+              {displayData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>

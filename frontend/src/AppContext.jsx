@@ -148,11 +148,16 @@ export const AppProvider = ({ children }) => {
         }
 
         if (data.status === 'failed') {
-          throw new Error(data.error || 'Job failed on the server');
+          // Add a special marker so the catch block knows it's a server failure
+          throw new Error(`JOB_FAILED: ${data.error || 'Job failed on the server'}`);
         }
 
         await delay(1500);
       } catch (error) {
+        if (error.message && error.message.includes('JOB_FAILED')) {
+          // Strip the marker and throw the actual error to stop polling
+          throw new Error(error.message.replace('JOB_FAILED: ', ''));
+        }
         if (attempts >= 5) {
           throw error;
         }
@@ -252,8 +257,9 @@ export const AppProvider = ({ children }) => {
       });
       await Promise.all(fetchPromises);
       setCleanedDataMap(newDataMap);
-
-      setCleanedData(mergedData);
+      
+      // Clear cleanedData to force DashboardTabs and DataCharts to fetch fresh data from the server
+      setCleanedData(null);
       setChecklistStep?.(4);
       setChecklistSuccess(true);
     } catch (error) {

@@ -139,7 +139,7 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Op
         cleaned_docs = result.get("cleanedDocuments", [])
         summary = result.get("summary", {})
 
-        store.save_session(
+        session_id = store.save_session(
             session_id=session_id,
             file_type=file_type,
             records=cleaned_docs,
