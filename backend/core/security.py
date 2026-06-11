@@ -1,7 +1,8 @@
 import re
 from pathlib import Path
 from typing import Any
-from flask import Response
+from flask import Response, request, jsonify
+from firebase_admin import auth as firebase_auth
 
 # --- Security Constants ---
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
@@ -34,3 +35,20 @@ def validate_file_extension(filename: str) -> str:
     if ext not in ALLOWED_EXTENSIONS:
         raise ValueError(f"Only CSV and Excel files are accepted. Got: {ext or 'none'}")
     return ext
+
+def require_auth():
+    if request.method == "OPTIONS":
+        return
+    if request.path == "/health":
+        return
+        
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"code": "UNAUTHORIZED", "message": "Missing or invalid Authorization header."}), 401
+        
+    token = auth_header.split(" ")[1]
+    try:
+        decoded_token = firebase_auth.verify_id_token(token)
+        request.user = decoded_token
+    except Exception as e:
+        return jsonify({"code": "UNAUTHORIZED", "message": f"Invalid token: {e}"}), 401

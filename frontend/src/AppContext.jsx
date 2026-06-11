@@ -9,6 +9,7 @@ import React, {
 import toast from 'react-hot-toast';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
+import { apiFetch } from './utils/api';
 
 export const AppContext = createContext();
 
@@ -134,7 +135,7 @@ export const AppProvider = ({ children }) => {
       attempts += 1;
 
       try {
-        const res = await fetch(`${API_BASE_URL}/status/${jobId}`);
+        const res = await apiFetch(`${API_BASE_URL}/status/${jobId}`);
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           throw new Error(extractErrorMessage(payload, 'Polling failed'));
@@ -193,7 +194,7 @@ export const AppProvider = ({ children }) => {
           formData.append('file', file, file.name || `${category}.csv`);
           formData.append('session_id', batchSessionId);
 
-          const response = await fetch(`${API_BASE_URL}/clean`, {
+          const response = await apiFetch(`${API_BASE_URL}/clean`, {
             method: 'POST',
             body: formData,
           });
@@ -240,7 +241,7 @@ export const AppProvider = ({ children }) => {
       const fetchPromises = responses.map(async (res) => {
         const type = res.category;
         try {
-          const dataRes = await fetch(`${API_BASE_URL}/data/${batchSessionId}?page=1&limit=200&file_type=${type}`);
+          const dataRes = await apiFetch(`${API_BASE_URL}/data/${batchSessionId}?page=1&limit=200&file_type=${type}`);
           if (dataRes.ok) {
             const dataPayload = await dataRes.json();
             newDataMap[type] = dataPayload.rows || [];
@@ -272,7 +273,7 @@ export const AppProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/query`, {
+      const response = await apiFetch(`${API_BASE_URL}/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

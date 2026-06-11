@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 
 const containerStyle = {
   width: '100%',
@@ -75,7 +76,7 @@ const MapView = () => {
     if (!sessionId) return;
     setLoadingData(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/priority/${sessionId}`);
+      const response = await apiFetch(`${API_BASE_URL}/priority/${sessionId}`);
       const data = await response.json();
       if (data.status === 'success') {
         setPriorities(data.priorities || []);

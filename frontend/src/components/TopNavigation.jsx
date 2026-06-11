@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 import ShareButton from './ShareButton';
 import { formatAlert } from '../utils/shareFormatter';
 
@@ -35,7 +36,7 @@ const TopNavigation = () => {
     if (!sessionId || !API_BASE_URL) return;
 
     let cancelled = false;
-    fetch(`${API_BASE_URL}/alerts/${sessionId}`)
+    apiFetch(`${API_BASE_URL}/alerts/${sessionId}`)
       .then(res => res.json())
       .then(data => {
         if (!cancelled && Array.isArray(data.alerts)) {

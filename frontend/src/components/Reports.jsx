@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 import { exportToPdf } from '../utils/exportPdf';
 import toast from 'react-hot-toast';
 import ShareButton from './ShareButton';
@@ -45,13 +46,13 @@ const Reports = () => {
       let url, data;
       if (type === 'sitrep') {
         url = `${API_BASE_URL}/sitrep/${sessionId}`;
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Failed');
         setReportData({ type: 'sitrep', ...data });
       } else {
         url = `${API_BASE_URL}/reports/generate/${sessionId}/${type}`;
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Failed');
         setReportData({ type, ...data.report });

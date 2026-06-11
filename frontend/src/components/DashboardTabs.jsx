@@ -62,7 +62,7 @@ const DashboardTabs = () => {
         cleanedData.cleanedDocuments.filter((row) => !row._file_type || row._file_type === requestedType),
       );
     } else if (sessionId) {
-      fetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${requestedType}`)
+      apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${requestedType}`)
         .then(res => res.json())
         .then(data => {
           if (data.rows) setRecords(data.rows);

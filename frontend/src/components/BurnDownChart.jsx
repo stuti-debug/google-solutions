@@ -4,6 +4,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 import ShareButton from './ShareButton';
 import { formatBurnDown } from '../utils/shareFormatter';
 
@@ -52,7 +53,7 @@ const BurnDownChart = () => {
     let cancelled = false;
     setLoading(true);
 
-    fetch(`${API_BASE_URL}/forecast/${sessionId}`)
+    apiFetch(`${API_BASE_URL}/forecast/${sessionId}`)
       .then(res => res.json())
       .then(data => {
         if (!cancelled && data.forecasts) {

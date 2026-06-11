@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 import ShareButton from './ShareButton';
 import { formatDispatch } from '../utils/shareFormatter';
 import toast from 'react-hot-toast';
@@ -45,7 +46,7 @@ const Logistics = () => {
     setError(null);
     try {
       // Fetch AI Matches
-      const matchRes = await fetch(`${API_BASE_URL}/match/${sessionId}`);
+      const matchRes = await apiFetch(`${API_BASE_URL}/match/${sessionId}`);
       const matchData = await matchRes.json();
       if (matchData.status === 'success') {
         setMatches(matchData.matches || []);
@@ -54,7 +55,7 @@ const Logistics = () => {
       }
 
       // Fetch Inventory items
-      const invRes = await fetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=inventory`);
+      const invRes = await apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=inventory`);
       if (invRes.ok) {
         const invData = await invRes.json();
         setInventory(invData.rows || []);
@@ -74,13 +75,13 @@ const Logistics = () => {
     if (!sessionId) return;
     setRecalculating(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/match/${sessionId}`);
+      const response = await apiFetch(`${API_BASE_URL}/match/${sessionId}`);
       const data = await response.json();
       if (data.status === 'success') {
         setMatches(data.matches || []);
         
         // Refresh inventory in case quantities changed
-        const invRes = await fetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=inventory`);
+        const invRes = await apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=inventory`);
         if (invRes.ok) {
           const invData = await invRes.json();
           setInventory(invData.rows || []);

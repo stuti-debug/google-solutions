@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 import ShareButton from './ShareButton';
 import { formatPriorityZone } from '../utils/shareFormatter';
 
@@ -16,7 +17,7 @@ const PriorityScores = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/priority/${sessionId}`);
+      const response = await apiFetch(`${API_BASE_URL}/priority/${sessionId}`);
       const data = await response.json();
       if (data.status === 'success') {
         setPriorities(data.priorities || []);

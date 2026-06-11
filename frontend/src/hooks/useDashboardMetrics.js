@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAppContext } from '../AppContext';
+import { apiFetch } from '../utils/api';
 
 const EMPTY_METRICS = {
   recordCount: 0,
@@ -57,7 +58,7 @@ export const useDashboardMetrics = () => {
     }
 
     let cancelled = false;
-    fetch(`${API_BASE_URL}/data/${sessionId}`)
+    apiFetch(`${API_BASE_URL}/data/${sessionId}`)
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
@@ -94,7 +95,7 @@ export const useDashboardMetrics = () => {
 
     const fetchInsights = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/insights/${sessionId}`);
+        const res = await apiFetch(`${API_BASE_URL}/insights/${sessionId}`);
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data.insights)) {

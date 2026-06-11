@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # Import core modules
 from core.firebase import init_firebase
-from core.security import security_headers_middleware
+from core.security import security_headers_middleware, require_auth
 from core.app_globals import limiter
 
 # Import routes (Blueprints)
@@ -35,7 +35,7 @@ def create_app():
     app.config["RATELIMIT_HEADERS_ENABLED"] = True
     
     # 4. Setup CORS
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    CORS(app, resources={r"/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"])
 
     # 4b. Setup Flask-Limiter with Redis backend
     limiter.init_app(app)
@@ -59,6 +59,7 @@ def create_app():
 
     # 7. Global Middlewares
     app.after_request(security_headers_middleware)
+    app.before_request(require_auth)
 
     # 8. Basic Health Check
     @app.route('/health')
