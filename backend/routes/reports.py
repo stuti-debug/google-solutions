@@ -2,9 +2,9 @@ import json
 from collections import Counter, defaultdict
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
-from core.security import validate_session_id
+from core.security import validate_session_id, verify_session_ownership
 from core.app_globals import store
 
 reports_bp = Blueprint("reports_gen", __name__)
@@ -334,6 +334,10 @@ REPORT_GENERATORS = {
 def generate_report(session_id: str, report_type: str):
     try:
         validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
 
         if report_type not in REPORT_GENERATORS:
             return jsonify({

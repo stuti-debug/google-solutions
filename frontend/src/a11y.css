@@ -1,0 +1,18 @@
+/* Accessibility utilities */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ensure focus states are highly visible for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--clr-primary, #0A6C74) !important;
+  outline-offset: 2px !important;
+}

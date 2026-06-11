@@ -1,9 +1,9 @@
 import math
 from typing import Any, Dict, List
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
-from core.security import validate_session_id
+from core.security import validate_session_id, verify_session_ownership
 from core.app_globals import store
 
 forecast_bp = Blueprint("forecast", __name__)
@@ -122,6 +122,10 @@ def _demo_forecasts() -> List[Dict[str, Any]]:
 def get_forecast(session_id: str):
     try:
         validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
 
         inventory_rows = store.get_session_rows(session_id, limit=500, file_type="inventory")
 

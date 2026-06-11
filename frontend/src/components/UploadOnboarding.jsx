@@ -146,6 +146,13 @@ const UploadOnboarding = () => {
                     className={`upload-box ${uploadedFiles[category] ? 'drag-over' : ''}`}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleFileDrop(e, category)}
+                    tabIndex="0"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        document.getElementById(`file-upload-${category}`).click();
+                      }
+                    }}
                     style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                   >
                     <i className="ph ph-cloud-arrow-up text-primary" aria-hidden="true"></i>
@@ -155,8 +162,9 @@ const UploadOnboarding = () => {
                       id={`file-upload-${category}`}
                       type="file" 
                       accept=".csv,.xlsx,.xls" 
-                      style={{ display: 'none' }}
+                      className="sr-only"
                       onChange={(e) => handleFileSelect(e, category)}
+                      aria-label={`Upload ${category} file`}
                     />
                   </label>
                 </div>

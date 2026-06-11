@@ -3,7 +3,7 @@ import io
 import csv
 from collections import Counter, defaultdict
 from typing import Any, Dict, List, Optional
-from core.security import validate_session_id
+from core.security import validate_session_id, verify_session_ownership
 from core.app_globals import store
 from core.firebase import get_db
 
@@ -259,6 +259,10 @@ def get_session_data(session_id: str):
     try:
         validate_session_id(session_id)
 
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
+
         # Try local SQLite first
         meta = store.get_session_meta(session_id)
         if meta:
@@ -293,6 +297,10 @@ def get_session_data(session_id: str):
 def get_insights(session_id: str):
     try:
         validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
 
         # Try local SQLite first, fallback to Firestore.
         session_meta = store.get_session_meta(session_id) or _get_firestore_session_meta(session_id)
@@ -348,6 +356,10 @@ def get_insights(session_id: str):
 def get_reports(session_id: str):
     try:
         validate_session_id(session_id)
+        
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
         
         # Try local first
         session_meta = store.get_session_meta(session_id)
@@ -418,6 +430,10 @@ def get_reports(session_id: str):
 def export_csv(session_id: str):
     try:
         validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
 
         local_meta = store.get_session_meta(session_id)
         requested_type = request.args.get("file_type") or request.args.get("type") or "all"

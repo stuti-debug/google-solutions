@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
-from core.security import validate_session_id
+from core.security import validate_session_id, verify_session_ownership
 from core.app_globals import store
 from core.matching_engine import calculate_real_priorities, calculate_real_matches
 from services.ai_mapper import GeminiAIMapper, QuotaExhaustedError
@@ -145,6 +145,10 @@ def _build_local_sitrep(ctx: Dict[str, Any]) -> str:
 def generate_sitrep(session_id: str):
     try:
         validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
 
         ctx = _gather_session_context(session_id)
         generated_at = datetime.now(timezone.utc).isoformat()

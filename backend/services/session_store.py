@@ -78,20 +78,35 @@ class SessionStore:
             }
             if "file_type" not in row_columns:
                 conn.execute("ALTER TABLE session_rows ADD COLUMN file_type TEXT")
+                
+            jobs_columns = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(jobs)").fetchall()
+            }
+            if "user_id" not in jobs_columns:
+                conn.execute("ALTER TABLE jobs ADD COLUMN user_id TEXT")
+                
+            sessions_columns = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(sessions)").fetchall()
+            }
+            if "user_id" not in sessions_columns:
+                conn.execute("ALTER TABLE sessions ADD COLUMN user_id TEXT")
+                
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_rows_session ON session_rows(session_id, row_index)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_rows_type ON session_rows(session_id, file_type, row_index)")
 
-    def create_job(self, filename: str = "upload") -> str:
+    def create_job(self, filename: str = "upload", user_id: Optional[str] = None) -> str:
         job_id = uuid.uuid4().hex
         now = self._now()
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO jobs(job_id, status, progress, message, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs(job_id, status, progress, message, user_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, "processing", 0, f"Received file: {filename}", now, now),
+                (job_id, "processing", 0, f"Received file: {filename}", user_id, now, now),
             )
         return job_id
 
@@ -155,6 +170,7 @@ class SessionStore:
         file_type: str,
         records: List[Dict[str, Any]],
         summary: Dict[str, Any],
+        user_id: Optional[str] = None,
         ) -> str:
         session_id = session_id or uuid.uuid4().hex
         incoming_records = records or []
@@ -170,8 +186,8 @@ class SessionStore:
                     """
                     INSERT INTO sessions(
                         session_id, file_type, record_count, columns_json, dtypes_json,
-                        profile_json, summary_json, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        profile_json, summary_json, user_id, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         session_id,
@@ -181,6 +197,7 @@ class SessionStore:
                         "{}",
                         json.dumps(self._build_profile(pd.DataFrame()), ensure_ascii=False),
                         json.dumps({}, ensure_ascii=False),
+                        user_id,
                         now,
                     ),
                 )

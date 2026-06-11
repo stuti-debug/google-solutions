@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify
 from core.firebase import get_db
 from core.security import (
     validate_session_id, 
+    verify_session_ownership,
     FIRESTORE_COLLECTION_PATTERN, 
     FIRESTORE_FIELD_PATTERN, 
     ALLOWED_FIRESTORE_OPERATORS
@@ -208,9 +209,13 @@ def query_data():
         if not all_session_ids:
             return jsonify({"code": "NO_SESSION", "message": "No session data found. Please upload data first."}), 400
 
+        user_id = getattr(request, "user", {}).get("uid")
+
         # Validate all session IDs
         for sid in all_session_ids:
             validate_session_id(sid)
+            if user_id and not verify_session_ownership(sid, user_id):
+                return jsonify({"code": "FORBIDDEN", "message": f"You do not have access to session {sid}."}), 403
 
         # Gather metadata for all sessions
         all_meta = _gather_all_session_meta(all_session_ids)

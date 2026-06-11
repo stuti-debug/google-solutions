@@ -1,5 +1,8 @@
 :root {
-  /* Colors */
+  /* Accessibility Utilities */
+  --sr-only-position: absolute;
+
+/* Colors */
   --clr-primary: #0A6C74;
   --clr-primary-hover: #074E55;
   --clr-accent: #E76F51;

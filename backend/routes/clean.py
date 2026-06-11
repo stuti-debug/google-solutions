@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify
 from firebase_admin import firestore
 
 from core.firebase import get_db
-from core.security import validate_job_id, validate_file_extension, validate_session_id
+from core.security import validate_job_id, validate_file_extension, validate_session_id, verify_job_ownership
 from core.app_globals import store, CLEAN_JOB_EXECUTOR, PIPELINE, limiter
 
 clean_bp = Blueprint('clean', __name__)
@@ -31,6 +31,7 @@ def _update_firestore_session_doc(
     record_count: Optional[int] = None,
     columns: Optional[List[str]] = None,
     error: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> None:
     db = get_db()
     if db is None:
@@ -43,6 +44,8 @@ def _update_firestore_session_doc(
         "message": message,
         "updated_at": firestore.SERVER_TIMESTAMP,
     }
+    if user_id:
+        payload["user_id"] = user_id
     if file_type is not None:
         payload["file_type"] = file_type
     if summary is not None:
@@ -89,7 +92,7 @@ def _write_records_to_firestore(
             batch.set(doc_ref, payload)
         batch.commit()
 
-def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Optional[str] = None) -> None:
+def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Optional[str] = None, user_id: Optional[str] = None) -> None:
     session_id = session_id or uuid.uuid4().hex
     try:
         _update_firestore_session_doc(
@@ -97,6 +100,7 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Op
             status="processing",
             progress=0,
             message=f"Received file: {filename}",
+            user_id=user_id,
         )
 
         last_progress = {"value": -1, "message": "", "ts": 0.0}
@@ -124,6 +128,7 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Op
                 status="processing",
                 progress=safe_value,
                 message=message,
+                user_id=user_id,
             )
             last_progress["value"] = safe_value
             last_progress["message"] = message
@@ -144,6 +149,7 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Op
             file_type=file_type,
             records=cleaned_docs,
             summary=summary,
+            user_id=user_id,
         )
         session_meta = store.get_session_meta(session_id) or {}
         aggregate_summary = session_meta.get("summary") or summary
@@ -177,6 +183,7 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Op
             summary=aggregate_summary,
             record_count=aggregate_record_count,
             columns=aggregate_columns,
+            user_id=user_id,
         )
     except Exception as exc:
         store.update_job(
@@ -192,6 +199,7 @@ def _run_clean_job(job_id: str, filename: str, file_bytes: bytes, session_id: Op
             progress=100,
             message="Processing failed",
             error=str(exc),
+            user_id=user_id,
         )
 
 # --- Routes ---
@@ -218,8 +226,10 @@ def clean_upload():
         if len(raw) > (10 * 1024 * 1024):
             return jsonify({"code": "FILE_TOO_LARGE", "message": "File exceeds 10MB limit."}), 413
 
-        job_id = store.create_job(filename=filename)
-        CLEAN_JOB_EXECUTOR.submit(_run_clean_job, job_id, filename, raw, session_id)
+        user_id = getattr(request, "user", {}).get("uid")
+
+        job_id = store.create_job(filename=filename, user_id=user_id)
+        CLEAN_JOB_EXECUTOR.submit(_run_clean_job, job_id, filename, raw, session_id, user_id)
         return jsonify({"job_id": job_id, "session_id": session_id, "status": "processing"})
     except ValueError as exc:
         return jsonify({"code": "INVALID_FILE_TYPE", "message": str(exc)}), 400
@@ -236,6 +246,10 @@ def get_job_status(job_id: str):
     job = store.get_job(job_id)
     if not job:
         return jsonify({"code": "JOB_NOT_FOUND", "message": "Job not found."}), 404
+
+    user_id = getattr(request, "user", {}).get("uid")
+    if user_id and not verify_job_ownership(job_id, user_id):
+        return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this job."}), 403
 
     response = {
         "job_id": job.get("job_id"),

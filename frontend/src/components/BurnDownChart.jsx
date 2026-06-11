@@ -121,7 +121,7 @@ const BurnDownChart = () => {
               ))}
             </div>
 
-            <div style={{ width: '100%', height: 260 }}>
+            <div style={{ width: '100%', height: 260 }} role="img" aria-label="Resource Burn-Down Forecast Chart">
               <ResponsiveContainer>
                 <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <XAxis 

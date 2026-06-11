@@ -1,5 +1,5 @@
-from flask import Blueprint, jsonify
-from core.security import validate_session_id
+from flask import Blueprint, jsonify, request
+from core.security import validate_session_id, verify_session_ownership
 from core.app_globals import store
 from core.matching_engine import calculate_real_matches
 
@@ -9,6 +9,10 @@ match_bp = Blueprint('match', __name__)
 def get_supply_match(session_id):
     try:
         validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
         
         # Fetch rows from SQLite/Firestore
         beneficiaries = store.get_session_rows(session_id, file_type="beneficiary")

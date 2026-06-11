@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
-from core.security import validate_session_id
+from core.security import validate_session_id, verify_session_ownership
 from core.app_globals import store
 
 alerts_bp = Blueprint("alerts", __name__)
@@ -132,6 +132,10 @@ def _generate_alerts(session_id: str) -> List[Dict[str, Any]]:
 def get_alerts(session_id: str):
     try:
         validate_session_id(session_id)
+
+        user_id = getattr(request, "user", {}).get("uid")
+        if user_id and not verify_session_ownership(session_id, user_id):
+            return jsonify({"code": "FORBIDDEN", "message": "You do not have access to this session."}), 403
         alerts = _generate_alerts(session_id)
         return jsonify({"alerts": alerts, "count": len(alerts)})
     except ValueError as exc:

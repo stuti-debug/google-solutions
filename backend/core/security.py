@@ -58,3 +58,41 @@ def require_auth():
         request.user = decoded_token
     except Exception as e:
         return jsonify({"code": "UNAUTHORIZED", "message": f"Invalid token: {e}"}), 401
+
+def verify_session_ownership(session_id: str, user_id: str) -> bool:
+    from core.app_globals import store
+    from core.firebase import get_db
+
+    # 1. Check local SQLite store
+    meta = store.get_session_meta(session_id)
+    if meta:
+        stored_user = meta.get("user_id")
+        if stored_user and stored_user != user_id:
+            return False
+        return True
+
+    # 2. Check Firestore fallback
+    db = get_db()
+    if db is None:
+        return True
+        
+    try:
+        doc = db.collection("sessions").document(session_id).get()
+        if doc.exists:
+            data = doc.to_dict()
+            stored_user = data.get("user_id")
+            if stored_user and stored_user != user_id:
+                return False
+    except Exception:
+        pass
+
+    return True
+
+def verify_job_ownership(job_id: str, user_id: str) -> bool:
+    from core.app_globals import store
+    job = store.get_job(job_id)
+    if job:
+        stored_user = job.get("user_id")
+        if stored_user and stored_user != user_id:
+            return False
+    return True

@@ -77,7 +77,7 @@ export const AffectedPopulationChart = () => {
         <i className="ph-fill ph-users-three text-primary"></i> Affected Population
       </h3>
       <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', marginTop: '0.2rem', marginBottom: '1rem' }}>Civilians affected by relief hotspot locations.</p>
-      <div style={{ width: '100%', height: 250 }}>
+      <div style={{ width: '100%', height: 250 }} role="img" aria-label="Affected Population Bar Chart">
         <ResponsiveContainer>
           <BarChart data={displayData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--clr-text-muted)' }} axisLine={false} tickLine={false} />
@@ -145,7 +145,7 @@ const InventoryBreakdownChart = () => {
         <i className="ph-fill ph-package text-success"></i> Inventory Breakdown
       </h3>
       <p style={{ color: 'var(--clr-text-muted)', fontSize: '0.75rem', marginTop: '0.2rem', marginBottom: '1rem' }}>Distribution of current supply stocks by item category.</p>
-      <div style={{ width: '100%', height: 250 }}>
+      <div style={{ width: '100%', height: 250 }} role="img" aria-label="Inventory Breakdown Pie Chart">
         <ResponsiveContainer>
           <PieChart>
             <Pie
