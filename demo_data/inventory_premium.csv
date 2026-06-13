@@ -1,23 +1,16 @@
-item_name,category,quantity,unit,district,warehouse,expiry_date,stock_status
-Rice Bags (25kg),Food,150,bags,Chennai,Warehouse Alpha,12-2026,Adequate
-Water Purification Tablets,Water,5000,tablets,Chennai,Chetpet Camp,2025/12/01,Critical
-Woolen Blankets,Shelter,300,pieces,Chennai,Warehouse Beta,N/A,Low
-First Aid Kits (Pro),Medical,45,kits,Chennai,Saidapet Bridge,05-2027,Critical
-High-Energy Biscuits,Food,1200,packets,Chennai,Warehouse Alpha,Jan-2026,Adequate
-Paracetamol (500mg),Medical,2000,strips,Chennai,Chetpet Camp,11/2025,Adequate
-Tents (4-person),Shelter,25,units,Chennai,Warehouse Beta,None,Critical
-Sanitary Pads,Hygiene,850,packs,Chennai,Saidapet Bridge,2027-01-01,Adequate
-Chlorine Bottles,Water,100,liters,Chennai,Warehouse Alpha,08/2026,Low
-Baby Formula,Food,60,cans,Chennai,Chetpet Camp,04-2026,Critical
-ORS Packets,Medical,3000,sachets,Chennai,Saidapet Bridge,Dec 2026,Adequate
-Flashlights (LED),Tools,120,units,Chennai,Warehouse Beta,None,Adequate
-Disposable Gloves,Medical,500,boxes,Chennai,Warehouse Alpha,2028/06,Adequate
-Tarpaulin Sheets,Shelter,200,rolls,Chennai,Saidapet Bridge,N/A,Low
-Milk Powder,Food,400,kg,Chennai,Chetpet Camp,03-2026,Adequate
-rice bags 25kg,food,150,bags,chennai,warehouse alpha,12-2026,adequate
-water purification tablets,Water,5000,tablets,Chennai,Chetpet Camp,2025/12/01,Critical
-First Aid Kits (Pro),Medical,,kits,Chennai,Saidapet Bridge,05-2027,Critical
-ORS pkt,med,3000,sachets,chn,Saidapet Br.,Dec 2026,adequate
-Paracetamol 500mg,Medical,N/A,strips,Chennai,Chetpet Camp,11/2025,Adequate
-tarpaulin,shelter,200,rolls,KCP,Saidapet Bridge,N/A,low
-N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A
+item_name,category,quantity,unit,warehouse,is_crisis_zone
+Drinking Water (20L Cans),Water,5000,Litres,Charbagh Central Depot,FALSE
+ORS Sachets,Water,8000,Sachets,Aminabad Logistics Hub,FALSE
+Water Purification Tablets,Water,12000,Tablets,Indira Nagar Red Cross Supply,FALSE
+First Aid Kits,Medical,400,Kits,Charbagh Central Depot,FALSE
+Oral Rehydration Solution,Medical,2500,Sachets,Aminabad Logistics Hub,FALSE
+Paracetamol 500mg,Medical,15000,Tablets,Indira Nagar Red Cross Supply,FALSE
+Flood Relief Food Packets,Food,3000,Packets,Charbagh Central Depot,FALSE
+Compressed Rice Biscuits,Food,5000,Packs,Aminabad Logistics Hub,FALSE
+Ready-to-Eat Rations,Food,2200,Packets,Indira Nagar Red Cross Supply,FALSE
+Emergency Relief Tarpaulins,Shelter,800,Pieces,Charbagh Central Depot,FALSE
+Family Tent Kits,Shelter,350,Kits,Aminabad Logistics Hub,FALSE
+Thermal Blankets,Shelter,1200,Pieces,Indira Nagar Red Cross Supply,FALSE
+Hygiene Kits (Soap & Sanitizer),Hygiene,900,Kits,Charbagh Central Depot,FALSE
+Sanitary Napkins,Hygiene,4000,Packs,Aminabad Logistics Hub,FALSE
+Surplus Food from Camp Kitchen,Food,200,Packets,Gomti Nagar Shelter,TRUE

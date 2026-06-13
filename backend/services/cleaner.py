@@ -54,7 +54,9 @@ CANONICAL_SCHEMAS: Dict[str, List[str]] = {
 }
 
 REQUIRED_FIELDS: Dict[str, List[str]] = {
-    "beneficiary": ["name", "district", "village"],
+    # 'district' is intentionally NOT required for beneficiaries —
+    # many real field CSVs omit it; removing it prevents mass row-drops.
+    "beneficiary": ["name", "village"],
     "inventory": ["item_name", "quantity"],
     "donor": ["donor_name"],
 }
@@ -72,7 +74,8 @@ NUMERIC_FIELDS: Dict[str, List[str]] = {
 }
 
 DEDUPE_KEYS: Dict[str, List[str]] = {
-    "beneficiary": ["name", "phone", "district", "village"],
+    # district excluded from beneficiary dedupe — it's often null/absent
+    "beneficiary": ["name", "phone", "village"],
     "inventory": ["item_name", "district", "warehouse", "expiry_date"],
     "donor": ["donor_name", "phone", "email", "date_donated", "amount"],
 }
@@ -81,6 +84,10 @@ COLUMN_ALIASES: Dict[str, Dict[str, str]] = {
     "beneficiary": {
         "beneficiaryname": "name",
         "nameofthebeneficiary": "name",
+        "head_of_household": "name",
+        "headofhousehold": "name",
+        "head_of_hh": "name",
+        "headofhh": "name",
         "hhsize": "household_size",
         "familysize": "household_size",
         "regdate": "date_registered",

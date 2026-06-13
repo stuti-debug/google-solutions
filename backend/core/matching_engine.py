@@ -2,7 +2,8 @@
 CrisisGrid Matching Engine
 ==========================
 Uses Google OR-Tools GLOP Linear Programming Solver to solve a
-min-cost transportation network flow problem:
+min-cost transportation network flow problem.
+Scenario: Severe Monsoon Flood — Gomti River basin, Lucknow, Uttar Pradesh.
 
   Decision variable : x[i][j] = units shipped from warehouse i to camp j
   Objective         : minimize  Σ cost[i][j] * x[i][j]   (cost = haversine distance)
@@ -32,20 +33,26 @@ except ImportError:  # pragma: no cover
     _ORTOOLS_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
-# Static coordinate table for Chennai (fallback when Geocoding API absent)
+# Static coordinate table for Lucknow (fallback when Geocoding API absent)
+# Scenario: Severe monsoon flood — Gomti River basin, Lucknow, Uttar Pradesh
 # ---------------------------------------------------------------------------
-CHENNAI_COORDS: Dict[str, Tuple[float, float]] = {
-    "chetpet camp": (13.0714, 80.2376),
-    "chetpet": (13.0714, 80.2376),
-    "saidapet bridge": (13.0154, 80.2220),
-    "saidapet": (13.0154, 80.2220),
-    "velachery relief center": (12.9815, 80.2180),
-    "velachery": (12.9815, 80.2180),
-    "guindy industrial estate": (13.0067, 80.2206),
-    "guindy relief center": (13.0067, 80.2206),
-    "guindy": (13.0067, 80.2206),
-    "tambaram shelter": (12.9249, 80.1000),
-    "tambaram": (12.9249, 80.1000),
+LUCKNOW_COORDS: Dict[str, Tuple[float, float]] = {
+    # Crisis camps / beneficiary zones
+    "hazratganj relief camp": (26.8500, 80.9499),
+    "hazratganj": (26.8500, 80.9499),
+    "gomti nagar shelter": (26.8600, 81.0000),
+    "gomti nagar": (26.8600, 81.0000),
+    "alambagh transit center": (26.8024, 80.9035),
+    "alambagh": (26.8024, 80.9035),
+    "chowk temporary shelter": (26.8681, 80.9129),
+    "chowk": (26.8681, 80.9129),
+    # Supply depots / warehouses
+    "charbagh central depot": (26.8384, 80.9152),
+    "charbagh": (26.8384, 80.9152),
+    "aminabad logistics hub": (26.8499, 80.9296),
+    "aminabad": (26.8499, 80.9296),
+    "indira nagar red cross supply": (26.8794, 81.0024),
+    "indira nagar": (26.8794, 81.0024),
 }
 
 # Keywords that indicate a location is a crisis zone, NOT a proper supply depot
@@ -122,8 +129,8 @@ def _resolve_coords(
     norm_overrides = {normalize_location(k): v for k, v in location_overrides.items()}
     if norm_name in norm_overrides:
         return norm_overrides[norm_name]
-    norm_chennai = {normalize_location(k): v for k, v in CHENNAI_COORDS.items()}
-    return norm_chennai.get(norm_name, (13.0827, 80.2707))  # fallback = Chennai centre
+    norm_lucknow = {normalize_location(k): v for k, v in LUCKNOW_COORDS.items()}
+    return norm_lucknow.get(norm_name, (26.8467, 80.9462))  # fallback = Lucknow centre
 
 # ---------------------------------------------------------------------------
 # Priority scoring (unchanged from original – no LP required here)
@@ -224,7 +231,7 @@ def calculate_real_priorities(
         reasoning = f"{primary} Full breakdown: {needs_str}."
 
         lat, lng = _resolve_coords(norm_village, location_overrides)
-        needs_geocoding = (lat, lng) == (13.0827, 80.2707)
+        needs_geocoding = (lat, lng) == (26.8467, 80.9462)
 
         priorities.append({
             "id": f"pri-{pri_idx}",

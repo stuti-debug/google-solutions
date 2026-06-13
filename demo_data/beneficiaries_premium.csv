@@ -1,27 +1,26 @@
-Name,Age,Gender,District,Village,Household_Size,Need_Type,Phone,Status
-Arjun Sharma,34,Male,Chennai,Chetpet Camp,5,Food kits,+91 98400 12345,Verified
-Priya Das,28,Female,Chennai,Saidapet Bridge,3,Medicine,9840122334,Pending
-M. K. Sathish,45,Male,Chennai,Chetpet Camp,6,Water,044-28341234,Verified
-Lila Ramakrishnan,62,Female,Kanchipuram,Velachery Relief Center,1,Shelter,9770011223,Verified
-Suresh Kumar,39,Male,chennai,chetpet camp,4,Food,+91-98401-23456,Verified
-Anitha R.,25,F,KCP,Velachery RC,2,med,9840033221,pending
-Vikram Nair,50,Male,Chennai,Saidapet Br.,7,Water purification,9884012233,Verified
-Deepa S.,31,Female,Chennai,Guindy Ind. Estate,3,food kits,9444022113,Verified
-Rajesh V.,48,Male,Kanchipuram,Guindy Industrial Estate,4,Medicine,9840044332,Verified
-Sunita G.,33,Female,Kanchipuram,Velachery Relief Center,2,Water,919444055661,Verified
-B. Chander,29,Male,Chennai,Saidapet Bridge,5,Food kits,,Verified
-Rina S.,27,Female,Chennai,Chetpet Camp,4,Medicine,9840123987,Pending
-Gopal Krishnan,52,Male,Kanchipuram,Guindy Industrial Estate,6,Shelter,9444000111,Verified
-Sita Ram,36,Female,Kanchipuram,Velachery Relief Center,3,Food kits,919840077665,Verified
-Deepak J.,41,Male,Chennai,Saidapet Bridge,2,Water,9884055443,Verified
-Asha N.,30,Female,Chennai,Chetpet Camp,5,Medicine,,Verified
-P. Mani,44,Male,Kanchipuram,Guindy Industrial Estate,4,Food kits,91-94440-12345,Verified
-K. Shanthi,58,Female,Kanchipuram,Velachery Relief Center,2,Shelter,9840011224,Verified
-Arjun Sharma,34,Male,Chennai,Chetpet Camp,5,Food kits,+91 98400 12345,Verified
-Suresh Kumar,39,Male,Chennai,Chetpet Camp,4,Food,9840123456,Verified
-Priya Das,28,Female,Chennai,Saidapet Bridge,3,Medicine,9840122334,Pending
-N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A
-Ramesh B.,,Male,chn,Tambaram Shelter,,water,null,verified
-Meena C.,35,Female,Chennai,Chetpet camp,3,FOOD KITS,9840099887,VERIFIED
-Lakshmi D.,44,F,kanchipuram,velachery relief ctr,2,shelter,+919840011224,Verified
-Vijay M.,37,m,Chennai,saidapet bridge,4,medicine,9884 05 5443,pending
+head_of_household,household_size,phone,village,need_type,status
+Ramesh Kumar Verma,6,9415012301,Hazratganj Relief Camp,Water,Pending
+Sunita Devi,4,9415023412,Hazratganj Relief Camp,Food,Dispatched
+Mohd. Irfan Ansari,5,9452034523,Hazratganj Relief Camp,Medical,Pending
+Kavita Singh Rawat,3,9415045634,Gomti Ngr Shlter,Shelter,Pending
+Dinesh Prasad Mishra,7,9452056745,Gomti Nagar Shelter,Water,Dispatched
+Anjali Sharma,4,9415067856,Alambagh Transit Center,Food,Pending
+Priya Yadav,2,9452078967,Chowk Temporary Shelter,Medical,Dispatched
+Rakesh Tiwari,8,9415089078,Hazratganj Relief Camp,Food,Pending
+Nirmala Pandey,5,9452090189,Alambagh Transit Center,Water,Pending
+Suresh Lal Gupta,3,9415001290,Chowk Tmp Shelter,Shelter,Dispatched
+Fatima Khatoon,6,9452012301,Hazratganj Relif Cmp,Food,Pending
+Vijay Bahadur Shukla,4,9415023413,Gomti Ngr Shelter,Medical,Pending
+Geeta Rawat,5,9452034524,Hazrat Gunj Relief Camp,Water,Dispatched
+Anwar Khan,7,9415045635,Alambag Bridge,Shelter,Pending
+Pushpa Rani Dixit,3,9452056746,Chowk Temp Shltr,Food,Pending
+Mahesh Chandra,4,9415067857,Hazratganj Relief Camp,Medical,Dispatched
+Ranjana Tripathi,6,9452078968,Gomti Nagar Shelter,Water,Pending
+Ashok Kumar Patel,5,9415089079,Alambagh Transit Center,Food,Dispatched
+Saira Begum,3,9452090180,Chowk Temporary Shelter,Medical,Pending
+Shiv Shankar Bajpai,8,9415001291,Hazratgnj Relif Centr,Shelter,Pending
+Lalita Devi Srivastava,4,9452012302,Gomti Nagar Shelter,Food,Dispatched
+Deepak Verma,6,9415023414,Gomti Ngr Shilter,Water,Pending
+Meena Kumari,5,9452034525,Alambagh Transit Center,Medical,Dispatched
+Roop Narain Mishra,3,9415045636,Chowk Temporary Shelter,Shelter,Pending
+Amita Singh,7,9452056747,Hazratganj Relief Camp,Food,Pending

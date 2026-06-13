@@ -384,29 +384,44 @@ export const AppProvider = ({ children }) => {
     if (!sessionId || !user) return;
 
     const sessionDocRef = doc(db, 'sessions', sessionId);
-    const unsubscribe = onSnapshot(sessionDocRef, async (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        
-        // Fetch fresh rows from the database cache using apiFetch
-        try {
-          const typeEntries = await Promise.all(
-            ['beneficiary', 'inventory', 'donor'].map(async (fileType) => {
-              const res = await apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${fileType}`);
-              if (!res.ok) return [fileType, []];
-              const payload = await res.json();
-              return [fileType, payload.rows || []];
-            }),
-          );
-          setCleanedDataMap(Object.fromEntries(typeEntries));
-        } catch (err) {
-          console.error("Error updating real-time session sync:", err);
+    const unsubscribe = onSnapshot(
+      sessionDocRef,
+      async (snapshot) => {
+        if (snapshot.exists()) {
+          // Fetch fresh rows from the database cache using apiFetch
+          try {
+            const typeEntries = await Promise.all(
+              ['beneficiary', 'inventory', 'donor'].map(async (fileType) => {
+                const res = await apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${fileType}`);
+                if (!res.ok) return [fileType, []];
+                const payload = await res.json();
+                return [fileType, payload.rows || []];
+              }),
+            );
+            setCleanedDataMap(Object.fromEntries(typeEntries));
+          } catch (err) {
+            console.error("Error updating real-time session sync:", err);
+          }
         }
-      }
-    });
+      },
+      (firestoreError) => {
+        // Gracefully handle Firestore permission errors — real-time sync is
+        // an optional enhancement; the core app works without it.
+        if (firestoreError?.code === 'permission-denied') {
+          console.warn(
+            '[CrisisGrid] Firestore snapshot: permission-denied. ' +
+            'Real-time multi-user sync is disabled. ' +
+            'Update Firestore Security Rules to enable it.',
+          );
+        } else {
+          console.warn('[CrisisGrid] Firestore snapshot error (non-fatal):', firestoreError?.message);
+        }
+      },
+    );
 
     return () => unsubscribe();
   }, [sessionData, user, API_BASE_URL]);
+
 
   const value = useMemo(
     () => ({
