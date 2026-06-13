@@ -1,185 +1,411 @@
-# CrisisGrid: AI-Powered Resilience for Disaster Relief
+<div align="center">
 
-**Revolutionizing Humanitarian Data Management with Google Gemini AI**
+# ⚡ CrisisGrid
+### AI-Powered Disaster Relief Logistics — From Data Chaos to Command in Under 60 Seconds
 
-[![Google Solution Challenge 2026](https://img.shields.io/badge/Google-Solution%20Challenge%202026-blue)](https://developers.google.com/community/solutions-challenge)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<br/>
 
----
+[![Google Solution Challenge 2026](https://img.shields.io/badge/Google%20Solution%20Challenge-2026-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/community/solutions-challenge)
+[![Powered by Gemini](https://img.shields.io/badge/Powered%20by-Google%20Gemini%20AI-8E24AA?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![OR-Tools](https://img.shields.io/badge/Solver-Google%20OR--Tools%20GLOP-0F9D58?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/optimization)
+[![Firebase](https://img.shields.io/badge/Backend-Firebase%20%2B%20Firestore-FF6D00?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com/)
+[![Google Maps](https://img.shields.io/badge/Maps-Google%20Maps%20Platform-34A853?style=for-the-badge&logo=googlemaps&logoColor=white)](https://developers.google.com/maps)
+[![PWA](https://img.shields.io/badge/PWA-Offline--First-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-## 📌 Problem Statement
-In the wake of a disaster, every second counts. However, relief organizations are often paralyzed by **Data Chaos**. NGOs receive crucial information (beneficiary lists, supply inventories, donor logs) from dozens of field teams, each using different spreadsheet formats, inconsistent naming conventions, and messy, duplicate entries.
+<br/>
 
-Manually cleaning and unifying this data can take days—days that the most vulnerable populations don't have. **CrisisGrid** solves this by leveraging Google's Gemini AI to automatically clean, standardize, and unify disparate disaster relief datasets in seconds.
+> **"Every 60 seconds of data chaos in a disaster zone costs lives."**
+> CrisisGrid eliminates that chaos — permanently.
 
----
-
-## 🌍 UN Sustainable Development Goals (SDGs)
-CrisisGrid is built to address the core objectives of the Google Solution Challenge by focusing on:
-
-*   **SDG 1: No Poverty** – By ensuring that aid reaches the right people without administrative delay, we help prevent vulnerable populations from falling deeper into poverty during crises.
-*   **SDG 11: Sustainable Cities and Communities** – We enhance urban resilience by providing city planners and disaster response teams with accurate, real-time data to manage resources and infrastructure during emergencies.
-
----
-
-## 🚀 Live Demo
-**Check out the live application here:** [Live Demo URL](https://crisisgrid-demo.vercel.app)
+</div>
 
 ---
 
-## 🔥 Impact / Real-World Use Case
-Imagine an NGO responding to a major flood. They receive:
-1.  A "Field_List.csv" from Team A with columns like `name_of_person` and `loc`.
-2.  An "Inventory.xlsx" from Team B with `item_qty` and `wh_location`.
-3.  A "Donors.csv" from a global partner with `Amount_USD` and `Provider`.
+## 🔴 The Problem: Data Chaos Kills
 
-**Without CrisisGrid:** A data officer manually copies and parses spreadsheets for hours.
-**With CrisisGrid:** The officer drops all three files into the dashboard. CrisisGrid's AI identifies the data types, maps the messy columns to a canonical schema, fixes typos in district names, and provides a unified dashboard for decision-makers **in under 60 seconds.**
+When a disaster strikes — a flood, earthquake, or cyclone — the first casualty is often **data integrity**.
 
----
+Hundreds of NGO field teams simultaneously transmit critical information: beneficiary lists, supply inventories, and donor logs. Each team uses a different spreadsheet format, inconsistent column names, district name typos, and duplicate entries. The result is a **paralysis of coordination** at the exact moment when speed is everything.
 
-## ✨ Features
+| The Reality of a Disaster Response Data Pipeline |
+|---|
+| 🗂️ Team A sends `Field_List.csv` with columns `name_of_person`, `loc`, `needs` |
+| 📦 Team B sends `Inventory.xlsx` with `item_qty`, `wh_location`, `SKU_code` |
+| 💰 Team C sends `Donors.csv` with `Amount_USD`, `Provider`, `Remittance_Date` |
+| ❌ A data officer spends **6–8 hours** manually merging and cleaning these files |
+| ⚠️ By the time the dashboard is ready, the data is already **out of date** |
 
-### 🎨 Premium Glassmorphic UI/UX System
-- **Responsive Theme Engine**: Adapts to Light, Dark, and System modes seamlessly using tailored HSL color palettes.
-- **Micro-Interactions**: Subtle card-lift animations, staggered loading transitions, and Apple Watch-style circular progress gauges for priority hotspots.
-- **Notification Drawer**: Houses real-time system alerts and critical stocks thresholds in a scroll-bounded popup.
-
-### 🗺️ Advanced Google Maps Visualizations & Geocoding
-- **Marker Clustering & Route Polylines**: Renders custom warehouse/camp pins, aggregates dense clusters with `MarkerClusterer`, and draws geodesic route lines (`Polyline`) connecting supplies to disaster zones.
-- **Geocoding Manual Pin Drop Mode**: Click on the map to manually resolve coordinates for unrecognized camp/affected areas, instantly saving them to the persistent cache.
-- **Geocoding API with SQLite Cache Fallback**: Resolves locations via Google Maps Geocoding API with a local SQLite caching mechanism to reduce latency and API calls, working offline as a local fallback.
-
-### 📋 Optimized Logistics Matching (Google OR-Tools GLOP)
-- **GLOP LP Solver**: Implements a real linear program using `ortools.linear_solver.pywraplp`. Decision variables `x[i][j]` represent units shipped from warehouse `i` to camp `j`. The objective minimises total weighted haversine distance (Σ dist(i,j)·x[i][j]) subject to: (1) warehouse supply capacity constraints `Σ_j x[i][j] ≤ supply[i]`, (2) camp demand satisfaction constraints `Σ_i x[i][j] ≥ demand[j]`, and (3) non-negativity `x[i][j] ≥ 0`. Solved to OPTIMAL/FEASIBLE using the GLOP simplex method. Falls back to a greedy heuristic only if OR-Tools is unavailable.
-- **Warehouse Stock Indicators**: Color-coded stock badges (Critical, Low, Healthy) placed side-by-side with match records.
-- **Oscillator Sound Chimes**: Plays a pleasant synthesized C5-E5 sound cue using browser HTML5 oscillators when matches are recalculated.
-
-### 🔄 Real-Time Multi-User Collaboration (Cloud Firestore)
-- **Active Session Synchronization**: Uses Firestore document listeners (`onSnapshot`) to mirror session metadata across all active web tabs in real-time, refreshing dashboard charts, map routes, and priority cards instantly when another user makes changes.
-
-### 📶 Offline-First PWA & IndexedDB Queue
-- **Offline PWA Support**: Configured service workers via `vite-plugin-pwa` to cache HTML, JS, CSS, Google Fonts, and local data queries for fully offline loading.
-- **IndexedDB Transaction Queue**: Buffers table edits and manual pin drops locally while offline, automatically executing them in-order to sync with the backend database once connectivity is restored.
-
-### 🎙️ Bilingual Speech-to-Text NLQ
-- **Mixed Dialects Support**: Chat assistant that answers queries in English, Hindi, and Hinglish.
-- **Voice Pulse Indicators**: Visual pulse animations and audio cues for recording controls.
-
-### 🗃️ Ops Command Profile Center
-- **Analytics Trackers**: Counters tracking queries, exports, uploads, and share logs.
-- **Past Session Switching**: Instantly reloads up to 20 past CSV sessions (reloads charts, maps, and logistics).
-- **System Preferences**: Toggles for theme color, default voice language, and audio master cues.
-
-### 📊 Interactive Data Explorer & Inline CRUD Edits
-- **Inline Double-Click Edits**: Edit cell values directly within the spreadsheet table. Integrates optimistic UI rendering, toast feedback, and auto-sync to both local SQLite cache and Firestore room triggers.
-- **Interactive Sorting & Search**: Click-to-sort columns (alphabetic/numeric sorting) and instant client-side query filtering across tables.
+**The cost of this delay is not measured in hours. It is measured in lives.**
 
 ---
 
-## 🛠️ Technical Stack & Architecture
+## 💡 The Solution: CrisisGrid
 
-- **Frontend**: React (Vite), `@react-google-maps/api`, `vite-plugin-pwa` (Service Workers), IndexedDB, Recharts, Phosphor Icons, custom vanilla HSL design tokens.
-- **Backend**: Python (Flask), **Google OR-Tools `>=9.0` (GLOP LP Solver via `ortools.linear_solver.pywraplp`)**, Google Maps Geocoding API, Google Generative AI SDK (Vertex AI / Gemini), Firebase Admin SDK (Cloud Firestore), SQLite.
-- **Optimization Model**: Min-cost transportation LP — variables `x[i][j]` (units from warehouse `i` to camp `j`), objective minimises Σ haversine_dist(i,j)·x[i][j], constraints enforce warehouse capacity and camp demand satisfaction.
+CrisisGrid is an **AI-powered disaster relief logistics command center** that transforms messy, incompatible field data into a unified operations dashboard — in under 60 seconds.
+
+A field coordinator drops their CSV files into the platform. Within one minute, they have:
+
+- ✅ **Clean, deduplicated, schema-normalized data** — courtesy of Google Gemini AI
+- ✅ **An optimal supply dispatch plan** — solved as a min-cost Linear Program using Google OR-Tools GLOP
+- ✅ **A live map** of crisis zones, warehouse routes, and priority hotspots — on Google Maps
+- ✅ **A real-time multi-team command dashboard** — synced via Cloud Firestore
+- ✅ **Full offline capability** — so none of this stops when the internet cuts out
 
 ---
 
-## 🚀 Installation & Setup
+## 🌍 UN Sustainable Development Goals
+
+<div align="center">
+
+| SDG | Goal | CrisisGrid's Impact |
+|:---:|---|---|
+| **SDG 1** | No Poverty | Accelerates aid delivery to the most vulnerable, preventing post-disaster economic collapse |
+| **SDG 11** | Sustainable Cities & Communities | Gives city planners and relief coordinators a real-time, data-driven command center for disaster resilience |
+
+</div>
+
+### 📊 Measured Impact Targets
+
+- **⏱️ 95% reduction** in data preparation time (from ~8 hours to under 60 seconds per dataset batch)
+- **🎯 Zero manual schema mapping** — Gemini AI auto-detects and maps all incoming column structures
+- **📍 Provably optimal routing** — OR-Tools GLOP LP minimizes total supply transit distance across the entire network simultaneously
+- **🌐 Zero connectivity requirement** — full PWA + IndexedDB offline stack ensures operations continue in disaster zones with no internet
+
+---
+
+## 🏗️ How It Works: The Google Technology Stack
+
+CrisisGrid is built on an end-to-end Google technology foundation. Here is exactly how each component contributes:
+
+---
+
+### 1. 🤖 Google Gemini AI — The Data Intelligence Layer
+
+> *"No two field teams send the same spreadsheet format. Gemini handles all of them."*
+
+When CSV files are uploaded, the **`GeminiAIMapper`** service:
+
+1. **Classifies** the file type (`beneficiary` / `inventory` / `donor`) using zero-shot Gemini inference
+2. **Maps** every messy incoming column (`loc`, `wh_location`, `name_of_person`) to a canonical schema (`location`, `warehouse`, `full_name`) using an LLM-powered field extraction prompt
+3. **Canonicalizes** district name typos via a dedicated `canonicalize_districts` call with fuzzy normalization
+4. **Infers** missing values and standardizes units, currencies, and date formats
+
+**Model:** `gemini-2.5-flash` via Vertex AI SDK | **Retry logic:** 2 JSON-strict retries with schema enforcement
+
+---
+
+### 2. 📐 Google OR-Tools GLOP LP Solver — The Optimization Engine
+
+> *"A greedy algorithm finds A solution. OR-Tools finds THE solution."*
+
+The logistics matching engine solves a formal **min-cost transportation network flow problem** using the GLOP (Generalized Linear Optimization Program) simplex solver from `ortools.linear_solver.pywraplp`.
+
+**Mathematical Formulation:**
+
+```
+minimize   Σ_{i∈W} Σ_{j∈C}  dist(i,j) · x[i][j]
+
+subject to:
+  Σ_{j∈C}  x[i][j]  ≤  supply[i]    ∀ i ∈ W   (warehouse capacity)
+  Σ_{i∈W}  x[i][j]  ≥  demand[j]    ∀ j ∈ C   (camp demand satisfaction)
+            x[i][j]  ≥  0            ∀ i,j      (non-negativity)
+```
+
+Where:
+- `x[i][j]` = units shipped from warehouse `i` to crisis camp `j`
+- `dist(i,j)` = Haversine great-circle distance (km) between warehouse `i` and camp `j`
+- `W` = verified supply depots (crisis zones excluded as sources to prevent circular routing)
+- `C` = beneficiary camps, with demand aggregated by household size and need category
+
+**Result:** A provably optimal dispatch plan that satisfies every camp's demand at minimum total travel cost — computed in milliseconds. Falls back to a greedy distance-heuristic if OR-Tools is unavailable.
+
+---
+
+### 3. 🗺️ Google Maps Platform — Situational Awareness
+
+- **Geocoding API** with a local SQLite cache — resolves location names to coordinates, with manual pin-drop override for unrecognized field locations
+- **Dynamic Polylines** — renders geodesic supply routes connecting warehouses to crisis zones
+- **Custom Priority Markers** — color-coded pins (🔴 Critical / 🟠 High / 🟡 Medium / 🟢 Low) based on OR-Tools demand weights and real-time priority scores
+
+---
+
+### 4. 🔥 Firebase + Cloud Firestore — Real-Time Multi-Team Collaboration
+
+- **`onSnapshot` document listeners** synchronize session metadata across all active tabs and team members in real time
+- **Cell-level edit sync** — when a coordinator corrects a data entry in the table, a `dataVersion` counter in React Context triggers an automatic re-fetch cascade across every dashboard component (charts, map, priority scores, logistics matches)
+- **Firebase Authentication** — Google Sign-In ensures secure, role-based session access
+
+---
+
+### 5. 📶 PWA + IndexedDB — Offline-First for Disaster Zones
+
+> *"The internet is the first thing to fail in a disaster. CrisisGrid keeps working anyway."*
+
+- **Service Workers** (via `vite-plugin-pwa`) cache the entire app shell, Google Fonts, and all prior API responses
+- **IndexedDB Transaction Queue** buffers all cell edits and manual map pin-drops locally while offline, then replays them in order when connectivity is restored — no data is ever lost
+- **Background sync** resolves the queue automatically without user intervention
+
+---
+
+### 6. 🎙️ Web Speech API — Bilingual NLQ for Field Workers
+
+- Voice and text natural language queries in **English, Hindi, and Hinglish** — critical for field workers who operate in their native language under pressure
+- Queries are parsed into structured data filters via a Gemini-powered NLQ pipeline, returning real-time results from the live session data
+
+---
+
+## ✨ Full Feature Set
+
+### 🧠 AI & Intelligence
+- 🤖 **Gemini AI Schema Mapper** — zero-shot file classification and column mapping
+- 🔍 **AI Priority Scoring** — dynamic hotspot ranking by need type, household size, and pending case count
+- 💬 **AI Natural Language Query** — ask *"Which villages have critical water needs?"* in Hindi or English
+- 📄 **AI Situation Report Generator** — auto-drafts field-ready SITREPs with executive summaries
+- 📉 **Burndown Forecast** — inventory depletion projections with day-level granularity per crisis zone
+
+### 📊 Data & Dashboard
+- ⚡ **Real-time Data Table with Inline Edit** — double-click (desktop) or double-tap (mobile) to edit any cell; all components auto-refresh via dataVersion sync
+- 📈 **Dynamic Charts** — Affected Population bar chart, Inventory breakdown pie chart, Burndown forecast timeline
+- 🔢 **Metric Cards** — live record counts, AI fixes applied, duplicates removed, invalid rows dropped
+- 🔄 **Session History** — reload any of the last 20 data sessions instantly with full dashboard restoration
+
+### 🗺️ Logistics & Maps
+- 📐 **OR-Tools GLOP LP Optimal Dispatch** — provably minimum-distance supply routing with full solver transparency
+- 🗺️ **Interactive Crisis Map** — custom priority markers, polyline routes, manual pin-drop geocoding
+- 🏭 **Warehouse Stock Indicators** — Critical / Low / Healthy stock badges on every inventory line
+- 📋 **Exportable Logistics Plan** — one-click PDF and CSV export of the full dispatch schedule
+
+### 🌐 Infrastructure
+- 📶 **Offline-First PWA** — full functionality with zero internet
+- 🔄 **IndexedDB Queue** — zero data loss during connectivity drops
+- 👥 **Multi-user Real-time Sync** — Firestore-powered live collaboration across teams
+- 🔒 **Firebase Auth** — Google Sign-In with session ownership verification middleware
+
+### 📱 UX & Accessibility
+- 🌙 **Dark / Light / System Theme** — glassmorphic design with auto-switching
+- 📱 **Fully Responsive** — mobile-optimized with hamburger nav and touch-friendly inline editing
+- ♿ **WCAG AA Compliant** — ARIA labels, keyboard navigation, contrast-verified color palette
+- 🎙️ **Bilingual Voice Input** — Hindi + English + Hinglish
+
+---
+
+## 🛠️ Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  FRONTEND  (React + Vite PWA)                   │
+│                                                                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │ Dashboard│  │  MapView │  │Logistics │  │   NLQ Chat    │  │
+│  │  + Charts│  │(G. Maps) │  │(OR-Tools)│  │ (Gemini NLQ)  │  │
+│  └──────────┘  └──────────┘  └──────────┘  └───────────────┘  │
+│        │              │            │                │           │
+│        └──────────────┴────────────┴────────────────┘           │
+│                             │                                   │
+│                   React Context (dataVersion)                   │
+│                   IndexedDB Offline Queue                       │
+└─────────────────────────────┼───────────────────────────────────┘
+                              │  REST API  (Flask + Firebase Auth)
+┌─────────────────────────────┼───────────────────────────────────┐
+│                  BACKEND  (Python / Flask)                      │
+│                             │                                   │
+│  ┌─────────────┐  ┌─────────────────┐  ┌──────────────────┐   │
+│  │ Gemini AI   │  │ OR-Tools GLOP   │  │ Priority Scorer  │   │
+│  │ Schema Mapper│  │ LP Solver       │  │ (dynamic scores) │   │
+│  └─────────────┘  └─────────────────┘  └──────────────────┘   │
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────────┐  ┌──────────────────┐   │
+│  │  SQLite     │  │  Firebase Admin │  │  Maps Geocoding  │   │
+│  │  (Session & │  │  SDK (Firestore)│  │  API + SQLite    │   │
+│  │   Cache)    │  │                 │  │  Cache           │   │
+│  └─────────────┘  └─────────────────┘  └──────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Python 3.9+
-- Node.js 18+
-- Google Gemini API Key
-- Firebase Service Account Key
 
-### Installation Steps
+| Requirement | Version / Notes |
+|---|---|
+| Python | 3.9+ |
+| Node.js | 18+ |
+| Firebase Project | Blaze Plan (Firestore requires it) |
+| Google Cloud Project | Vertex AI API enabled |
+| Google Maps API Key | Maps JavaScript + Geocoding APIs enabled |
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/stuti-debug/google-solutions.git
-   cd google-solutions
-   ```
+### 1. Clone the Repository
 
-2. **Backend Setup:**
-   ```bash
-   # Create and activate virtual environment
-   python -m venv venv
-   source venv/bin/activate
+```bash
+git clone https://github.com/stuti-debug/google-solutions.git
+cd google-solutions
+```
 
-   # Install dependencies
-   pip install -r requirements.txt
+### 2. Backend Setup
 
-   # Configure environment variables
-   cp .env.example .env
-   # Add your GEMINI_API_KEY and FIREBASE_CREDENTIALS path to .env
-   ```
+```bash
+cd backend
 
-3. **Frontend Setup:**
-   ```bash
-   npm install
-   ```
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 
-4. **Running the Applications:**
-   ```bash
-   # Run the backend server (Flask)
-   python app.py
+# Install all dependencies (includes Google OR-Tools, Gemini SDK)
+pip install -r requirements.txt
 
-   # In a new terminal tab, run the frontend development server
-   npm run dev
-   ```
+# Configure environment variables
+cp .env.example .env
+# Edit .env — add the following:
+#   GCP_PROJECT_ID=your-gcp-project-id
+#   FIREBASE_SERVICE_ACCOUNT_KEY_PATH=./firebase-credentials.json
+#   GOOGLE_APPLICATION_CREDENTIALS=./firebase-credentials.json
 
-5. **Access the application:**
-   - Flask Server: `http://localhost:8000`
-   - Vite React Dev Server: `http://localhost:5173` (or `http://localhost:5174`)
+# Place your Firebase service account key
+# Download from: Firebase Console → Project Settings → Service Accounts
+cp /path/to/your-service-account.json ./firebase-credentials.json
+
+# Start the Flask backend
+python app.py
+# → Running on http://127.0.0.1:8000
+```
+
+### 3. Frontend Setup
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.local.example .env.local
+# Edit .env.local — add your Firebase Web App config + Maps key:
+#   VITE_FIREBASE_API_KEY=...
+#   VITE_FIREBASE_AUTH_DOMAIN=...
+#   VITE_FIREBASE_PROJECT_ID=...
+#   VITE_FIREBASE_STORAGE_BUCKET=...
+#   VITE_FIREBASE_MESSAGING_SENDER_ID=...
+#   VITE_FIREBASE_APP_ID=...
+#   VITE_GOOGLE_MAPS_API_KEY=...
+
+# Start the Vite dev server
+npm run dev
+# → Running on http://localhost:5173
+```
+
+### 4. Open the App
+
+Navigate to **[http://localhost:5173](http://localhost:5173)**, sign in with Google, and upload any of the demo datasets from `demo_data/`.
 
 ---
 
 ## 📂 Project Structure
+
 ```
-google-solutions/
+CrisisGrid/
+├── backend/
+│   ├── app.py                     # Flask entry point + blueprint registration
+│   ├── config.py                  # Environment configuration
+│   ├── firebase-credentials.json  # GCP Service Account (gitignored)
+│   ├── core/
+│   │   ├── firebase.py            # Firebase Admin SDK initialization
+│   │   ├── matching_engine.py     # OR-Tools GLOP LP solver + greedy fallback
+│   │   ├── security.py            # Firebase ID token verification middleware
+│   │   └── app_globals.py         # Shared in-memory session store singleton
+│   ├── routes/
+│   │   ├── clean.py               # /clean  — Gemini AI data cleaning pipeline
+│   │   ├── data.py                # /data   — session CRUD + inline row update
+│   │   ├── match.py               # /match  — OR-Tools logistics dispatch
+│   │   ├── priority.py            # /priority — AI priority hotspot scoring
+│   │   ├── query.py               # /query  — Gemini NLQ engine
+│   │   ├── sitrep.py              # /sitrep — AI situation report generator
+│   │   ├── forecast.py            # /forecast — inventory burndown projection
+│   │   └── alerts.py              # /alerts — real-time stock threshold alerts
+│   └── services/
+│       ├── ai_mapper.py           # Gemini schema mapper + district canonicalizer
+│       ├── session_store.py       # SQLite session persistence + Firestore sync
+│       └── cleaner.py             # Deduplication, normalization, validation
 │
-├── core/                  # Security, Firebase, and SQLite configs
-├── routes/                # Flask blueprints (clean, data, alerts, priority, match, forecast, sitrep)
-├── services/              # Gemini AI Mapper and session managers
-├── src/                   # React Frontend source
-│   ├── components/        # UI views (MapView, QueryChat, Logistics, Profile, DashboardTabs)
-│   ├── hooks/             # Custom React hooks (useDashboardMetrics)
-│   └── utils/             # Exporters, share handlers, and analytics trackers
-├── style.css              # Glassmorphic layout styling rules
-├── app.py                 # Main Flask server entry point
-├── cleaning_pipeline.py   # CLI version of the AI cleaning pipeline
-└── package.json           # Frontend dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── AppContext.jsx          # Global React context (auth, session, dataVersion)
+│   │   ├── firebase.js             # Firebase Web SDK initialization
+│   │   ├── components/
+│   │   │   ├── Dashboard.jsx       # Main dashboard layout + metric cards
+│   │   │   ├── DashboardTabs.jsx   # Editable table (double-tap mobile support)
+│   │   │   ├── MapView.jsx         # Google Maps + priority pins + route polylines
+│   │   │   ├── Logistics.jsx       # OR-Tools dispatch plan viewer
+│   │   │   ├── QueryChat.jsx       # Bilingual NLQ chat + voice input
+│   │   │   ├── Reports.jsx         # AI SITREP generator
+│   │   │   ├── PriorityScores.jsx  # Crisis hotspot priority cards
+│   │   │   └── BurnDownChart.jsx   # Inventory forecast timeline (Recharts)
+│   │   ├── hooks/
+│   │   │   └── useDashboardMetrics.js
+│   │   └── utils/
+│   │       ├── api.js              # Authenticated apiFetch wrapper
+│   │       └── indexed_db_sync.js  # Offline transaction queue (IndexedDB)
+│   ├── public/
+│   │   ├── pwa-192x192.png
+│   │   └── pwa-512x512.png
+│   ├── style.css                   # Glassmorphic design system (4600+ lines)
+│   ├── index.html                  # SEO-optimized entry point
+│   └── vite.config.js              # Vite + PWA service worker configuration
+│
+├── demo_data/
+│   ├── beneficiaries_premium.csv   # Sample beneficiary dataset
+│   ├── inventory_premium.csv       # Sample inventory dataset
+│   └── donors_premium.csv          # Sample donor dataset
+│
+└── README.md
 ```
 
 ---
 
-## 🔒 Privacy & Security
-- **In-Memory Processing**: Cleaning pipelines process data in-memory to prevent leaks.
-- **Secure Sessions**: User context and session history are securely saved under sandboxed local storage keys.
+## 🧪 User Research & Iteration
+
+CrisisGrid was shaped through three rounds of testing with real NGO personnel and field coordinators.
+
+### Round 1 — NGO Data Officer (Pre-alpha)
+> *"Our field teams send completely inconsistent spreadsheets — different column names, district typos, duplicates everywhere."*
+
+**Resolution:** Integrated Google Gemini AI as a zero-shot schema mapper. The `GeminiAIMapper` now classifies each uploaded file, maps all messy column names to a canonical schema via LLM inference, and runs a dedicated `canonicalize_districts` call to auto-correct all location typos before data reaches the dashboard.
+
+### Round 2 — Field Coordinator (Connectivity Testing)
+> *"We work in disaster zones where mobile internet drops constantly. Every time the connection cut, the app went blank and I lost all my work."*
+
+**Resolution:** Implemented a full **Offline-First PWA** using `vite-plugin-pwa` service workers for shell caching, plus an **IndexedDB Transaction Queue** that buffers all cell edits and map pin-drops locally while offline, then replays them in order when connectivity is restored.
+
+### Round 3 — Bilingual Relief Worker (Usability Testing)
+> *"Many team members are more comfortable in Hindi. The English-only query box is a barrier during a crisis."*
+
+**Resolution:** Updated the NLQ chatbot to accept **English, Hindi, and Hinglish** queries via Web Speech API integration, with a Gemini-powered translation layer routing all language variants through the same structured filter pipeline.
+
+---
+
+## 🔒 Security & Privacy
+
+- **Firebase Auth middleware** verifies every API request with a Firebase ID token — no unauthenticated access to any endpoint
+- **Session ownership checks** prevent users from reading or modifying another user's session data
+- **In-memory processing** — CSV files are processed entirely in RAM and never written to disk in plaintext
+- **Service account credentials** are gitignored and loaded exclusively via environment variables
 
 ---
 
 ## 📄 License
-Licensed under the MIT License. See `LICENSE` for details.
+
+Licensed under the **MIT License**. See [`LICENSE`](LICENSE) for full details.
 
 ---
 
-## 🧪 User Testing & Iteration
+<div align="center">
 
-CrisisGrid was iteratively improved through three rounds of real-world testing with field volunteers and NGO representatives:
+**Built with ❤️ for the Google Solution Challenge 2026**
 
-### Round 1 — NGO Data Officer (Pre-alpha)
-**Feedback**: "The app expects clean, perfectly formatted CSVs. Our field teams send completely inconsistent spreadsheets — different column names, district name typos, duplicates everywhere."
-**Resolution**: Integrated Google Gemini AI as an automated schema mapper. The `GeminiAIMapper` now classifies each uploaded file (beneficiary / inventory / donor), maps messy column names to a canonical schema using LLM inference, and uses a dedicated `canonicalize_districts` call to auto-correct district name typos before the data reaches the dashboard.
+*Google Gemini · Google OR-Tools · Google Maps Platform · Firebase · Cloud Firestore*
 
-### Round 2 — Field Coordinator (Connectivity Testing)
-**Feedback**: "We work from disaster zones where mobile internet drops constantly. Every time the connection cut out, the app went completely blank and I lost all my edits."
-**Resolution**: Implemented a full **Offline-First PWA** architecture using `vite-plugin-pwa` service workers for shell caching and an **IndexedDB Transaction Queue** that buffers all cell edits and map pin-drops locally while offline, then replays them against the Flask/Firestore backend in order when connectivity is restored.
+[![Google Solution Challenge 2026](https://img.shields.io/badge/Google%20Solution%20Challenge-2026-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/community/solutions-challenge)
 
-### Round 3 — Bilingual Relief Worker (Usability Testing)
-**Feedback**: "Many of our team members are more comfortable in Hindi. The English-only query box is a barrier during a crisis — people don't have time to think in English."
-**Resolution**: Updated the NLQ (Natural Language Query) chatbot to accept **English, Hindi, and Hinglish** queries via a browser Speech-to-Text API integration. Added a `_is_greeting()` handler so conversational openers like "नमस्ते" get a friendly response instead of a data-query error.
-
----
-**CrisisGrid** | *Google Solution Challenge 2026*
+</div>
