@@ -431,6 +431,8 @@ export const AppProvider = ({ children }) => {
       sessionData,
       uploadedFiles,
       setUploadedFiles,
+      setCleanedDataMap,
+      setSessionData,
       user,
       loading,
       signInWithGoogle,
