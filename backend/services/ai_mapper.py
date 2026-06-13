@@ -55,7 +55,7 @@ class GeminiAIMapper:
         # Initialize Vertex AI SDK
         vertexai.init(project=project_id, location=location)
 
-        self.model_name = model_name or settings.gemini_model or "gemini-2.5-flash"
+        self.model_name = model_name or settings.gemini_model or "gemini-3.5-flash"
         self.retries = settings.gemini_json_retries if retries is None else max(0, retries)
         self.model_name = self.model_name.replace("models/", "").strip()
 
