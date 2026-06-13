@@ -226,22 +226,45 @@ class GeminiAIMapper:
         raise AIMapperError("Empty response from Gemini")
 
     def _parse_json(self, raw: str) -> Dict[str, Any]:
+        # Strip markdown code fences (Gemini sometimes wraps each object in its own fence)
         cleaned = raw.strip()
-        cleaned = re.sub(r"^```json\s*|^```\s*|\s*```$", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"^```json\s*|^```\s*|\s*```$", "", cleaned, flags=re.IGNORECASE | re.MULTILINE)
+        cleaned = cleaned.strip()
 
+        # --- Tier 1: direct parse (happy path) ---
+        extra_data = False
         try:
             parsed = json.loads(cleaned)
             if not isinstance(parsed, dict):
                 raise AIMapperError("Gemini response JSON is not an object")
             return parsed
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
+            extra_data = "Extra data" in str(exc)
+
+        # --- Tier 2: "Extra data" — Gemini returned TWO objects; take the first ---
+        if extra_data:
+            start = cleaned.find("{")
+            if start != -1:
+                try:
+                    parsed, _ = json.JSONDecoder().raw_decode(cleaned, start)
+                    if isinstance(parsed, dict):
+                        return parsed
+                except json.JSONDecodeError:
+                    pass
+
+        # --- Tier 3: non-greedy regex to extract the first {...} block ---
+        match = re.search(r"\{.*?\}", cleaned, re.DOTALL)
+        if not match:
             match = re.search(r"\{[\s\S]*\}", cleaned)
-            if not match:
-                raise
-            parsed = json.loads(match.group(0))
-            if not isinstance(parsed, dict):
-                raise AIMapperError("Gemini response JSON is not an object")
-            return parsed
+        if match:
+            try:
+                parsed, _ = json.JSONDecoder().raw_decode(match.group(0))
+                if isinstance(parsed, dict):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+
+        raise AIMapperError(f"Could not extract a valid JSON object from Gemini response: {cleaned[:200]!r}")
 
     def _retry_delay_seconds(self, attempt: int) -> float:
         base = 0.75 * (2 ** attempt)

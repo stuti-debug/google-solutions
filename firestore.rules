@@ -1,6 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only backend service account can write
+    }
     match /{document=**} {
       allow read, write: if false;
     }
