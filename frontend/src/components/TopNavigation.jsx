@@ -30,7 +30,7 @@ const TopNavigation = () => {
 
   useEffect(() => {
     const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
-    if (!sessionId || !API_BASE_URL) return;
+    if (!sessionId || API_BASE_URL == null) return;
     let cancelled = false;
     apiFetch(`${API_BASE_URL}/alerts/${sessionId}`)
       .then(res => res.json())

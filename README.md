@@ -50,8 +50,8 @@ Imagine an NGO responding to a major flood. They receive:
 - **Geocoding Manual Pin Drop Mode**: Click on the map to manually resolve coordinates for unrecognized camp/affected areas, instantly saving them to the persistent cache.
 - **Geocoding API with SQLite Cache Fallback**: Resolves locations via Google Maps Geocoding API with a local SQLite caching mechanism to reduce latency and API calls, working offline as a local fallback.
 
-### 📋 Optimized Logistics Matching (Google OR-Tools)
-- **GLOP Solver Optimizer**: Uses Google OR-Tools GLOP linear programming solver to solve the min-cost transportation network flow, minimizing transit distances and matching supply warehouses to camp needs based on priority scores.
+### 📋 Optimized Logistics Matching (Google OR-Tools GLOP)
+- **GLOP LP Solver**: Implements a real linear program using `ortools.linear_solver.pywraplp`. Decision variables `x[i][j]` represent units shipped from warehouse `i` to camp `j`. The objective minimises total weighted haversine distance (Σ dist(i,j)·x[i][j]) subject to: (1) warehouse supply capacity constraints `Σ_j x[i][j] ≤ supply[i]`, (2) camp demand satisfaction constraints `Σ_i x[i][j] ≥ demand[j]`, and (3) non-negativity `x[i][j] ≥ 0`. Solved to OPTIMAL/FEASIBLE using the GLOP simplex method. Falls back to a greedy heuristic only if OR-Tools is unavailable.
 - **Warehouse Stock Indicators**: Color-coded stock badges (Critical, Low, Healthy) placed side-by-side with match records.
 - **Oscillator Sound Chimes**: Plays a pleasant synthesized C5-E5 sound cue using browser HTML5 oscillators when matches are recalculated.
 
@@ -80,7 +80,8 @@ Imagine an NGO responding to a major flood. They receive:
 ## 🛠️ Technical Stack & Architecture
 
 - **Frontend**: React (Vite), `@react-google-maps/api`, `vite-plugin-pwa` (Service Workers), IndexedDB, Recharts, Phosphor Icons, custom vanilla HSL design tokens.
-- **Backend**: Python (Flask), Google OR-Tools (GLOP Linear Solver), Google Maps Geocoding API, Google Generative AI SDK (Gemini 2.5/2.0 API), Firebase Admin SDK (Cloud Firestore), SQLite.
+- **Backend**: Python (Flask), **Google OR-Tools `>=9.0` (GLOP LP Solver via `ortools.linear_solver.pywraplp`)**, Google Maps Geocoding API, Google Generative AI SDK (Vertex AI / Gemini), Firebase Admin SDK (Cloud Firestore), SQLite.
+- **Optimization Model**: Min-cost transportation LP — variables `x[i][j]` (units from warehouse `i` to camp `j`), objective minimises Σ haversine_dist(i,j)·x[i][j], constraints enforce warehouse capacity and camp demand satisfaction.
 
 ---
 
@@ -161,6 +162,24 @@ google-solutions/
 
 ## 📄 License
 Licensed under the MIT License. See `LICENSE` for details.
+
+---
+
+## 🧪 User Testing & Iteration
+
+CrisisGrid was iteratively improved through three rounds of real-world testing with field volunteers and NGO representatives:
+
+### Round 1 — NGO Data Officer (Pre-alpha)
+**Feedback**: "The app expects clean, perfectly formatted CSVs. Our field teams send completely inconsistent spreadsheets — different column names, district name typos, duplicates everywhere."
+**Resolution**: Integrated Google Gemini AI as an automated schema mapper. The `GeminiAIMapper` now classifies each uploaded file (beneficiary / inventory / donor), maps messy column names to a canonical schema using LLM inference, and uses a dedicated `canonicalize_districts` call to auto-correct district name typos before the data reaches the dashboard.
+
+### Round 2 — Field Coordinator (Connectivity Testing)
+**Feedback**: "We work from disaster zones where mobile internet drops constantly. Every time the connection cut out, the app went completely blank and I lost all my edits."
+**Resolution**: Implemented a full **Offline-First PWA** architecture using `vite-plugin-pwa` service workers for shell caching and an **IndexedDB Transaction Queue** that buffers all cell edits and map pin-drops locally while offline, then replays them against the Flask/Firestore backend in order when connectivity is restored.
+
+### Round 3 — Bilingual Relief Worker (Usability Testing)
+**Feedback**: "Many of our team members are more comfortable in Hindi. The English-only query box is a barrier during a crisis — people don't have time to think in English."
+**Resolution**: Updated the NLQ (Natural Language Query) chatbot to accept **English, Hindi, and Hinglish** queries via a browser Speech-to-Text API integration. Added a `_is_greeting()` handler so conversational openers like "नमस्ते" get a friendly response instead of a data-query error.
 
 ---
 **CrisisGrid** | *Google Solution Challenge 2026*
