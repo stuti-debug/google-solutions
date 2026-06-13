@@ -41,7 +41,7 @@ export const AffectedPopulationChart = () => {
   React.useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
-    apiFetch(`${API_BASE_URL}/data/${sessionId}?limit=500`)
+    apiFetch(`${API_BASE_URL}/data/${sessionId}?limit=500&file_type=beneficiary`)
       .then(res => res.json())
       .then(data => {
         if (cancelled) return;
@@ -50,13 +50,30 @@ export const AffectedPopulationChart = () => {
 
         const locationCounts = {};
         rawDocs.forEach(row => {
-          const locKey = Object.keys(row).find(k => k.toLowerCase().includes('district') || k.toLowerCase().includes('village') || k.toLowerCase().includes('location') || k.toLowerCase().includes('camp'));
-          if (locKey && row[locKey]) {
-            const loc = row[locKey];
-            const numKey = Object.keys(row).find(k => k.toLowerCase().includes('affected') || k.toLowerCase().includes('quantity'));
-            const val = numKey && !isNaN(row[numKey]) ? Number(row[numKey]) : 1;
-            locationCounts[loc] = (locationCounts[loc] || 0) + val;
+          // Prioritize village/camp/center/hotspot, then district/location/city
+          let loc = row.village || row.district || row.location || row.camp || row.city;
+          if (!loc) {
+            const locKey = Object.keys(row).find(k => {
+              const lower = k.toLowerCase();
+              return lower.includes('village') || lower.includes('camp') || lower.includes('district') || lower.includes('location');
+            });
+            if (locKey) loc = row[locKey];
           }
+          if (!loc) loc = 'Unknown';
+
+          let val = 1;
+          if (row.household_size !== undefined && !isNaN(row.household_size)) {
+            val = Number(row.household_size);
+          } else {
+            const numKey = Object.keys(row).find(k => {
+              const lower = k.toLowerCase();
+              return lower.includes('size') || lower.includes('affected') || lower.includes('quantity') || lower.includes('count');
+            });
+            if (numKey && !isNaN(row[numKey])) {
+              val = Number(row[numKey]);
+            }
+          }
+          locationCounts[loc] = (locationCounts[loc] || 0) + val;
         });
 
         let barData = [];
@@ -86,7 +103,7 @@ export const AffectedPopulationChart = () => {
               cursor={{ fill: 'var(--clr-border)', opacity: 0.4 }}
               contentStyle={{ background: 'var(--clr-bg)', borderRadius: '8px', border: '1px solid var(--clr-border)', color: 'var(--clr-text)' }}
             />
-            <Bar dataKey="affected" radius={[4, 4, 0, 0]}>
+            <Bar dataKey="affected" radius={[4, 4, 0, 0]} minPointSize={5}>
               {displayData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill="var(--clr-primary)" />
               ))}
@@ -107,7 +124,7 @@ const InventoryBreakdownChart = () => {
   React.useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
-    apiFetch(`${API_BASE_URL}/data/${sessionId}?limit=500`)
+    apiFetch(`${API_BASE_URL}/data/${sessionId}?limit=500&file_type=inventory`)
       .then(res => res.json())
       .then(data => {
         if (cancelled) return;
@@ -116,13 +133,29 @@ const InventoryBreakdownChart = () => {
 
         const categoryCounts = {};
         rawDocs.forEach(row => {
-          const itemKey = Object.keys(row).find(k => k.toLowerCase() === 'item' || k.toLowerCase() === 'category' || k.toLowerCase().includes('need'));
-          if (itemKey && row[itemKey]) {
-            const item = row[itemKey];
-            const numKey = Object.keys(row).find(k => k.toLowerCase().includes('quantity') || k.toLowerCase().includes('amount'));
-            const val = numKey && !isNaN(row[numKey]) ? Number(row[numKey]) : 1;
-            categoryCounts[item] = (categoryCounts[item] || 0) + val;
+          let category = row.category || row.item_name || row.item;
+          if (!category) {
+            const itemKey = Object.keys(row).find(k => {
+              const lower = k.toLowerCase();
+              return lower === 'item' || lower === 'category' || lower.includes('need');
+            });
+            if (itemKey) category = row[itemKey];
           }
+          if (!category) category = 'Uncategorized';
+
+          let val = 1;
+          if (row.quantity !== undefined && !isNaN(row.quantity)) {
+            val = Number(row.quantity);
+          } else {
+            const numKey = Object.keys(row).find(k => {
+              const lower = k.toLowerCase();
+              return lower.includes('quantity') || lower.includes('amount');
+            });
+            if (numKey && !isNaN(row[numKey])) {
+              val = Number(row[numKey]);
+            }
+          }
+          categoryCounts[category] = (categoryCounts[category] || 0) + val;
         });
 
         let pieData = [];

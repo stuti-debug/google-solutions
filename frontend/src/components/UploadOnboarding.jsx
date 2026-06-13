@@ -206,8 +206,9 @@ const UploadOnboarding = () => {
               </div>
             )}
             {checklistSuccess === false && (
-               <div className="actions center-align mt-8">
+               <div className="actions center-align mt-8" style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                  <button className="btn secondary outline" onClick={() => navigate('screen-onboard-2')}>Go Back</button>
+                 <button className="btn primary outline" onClick={() => toast.error('Fallback to Manual Mapping (Coming Soon)')}>Manual Mapping (Fallback)</button>
                </div>
             )}
           </div>

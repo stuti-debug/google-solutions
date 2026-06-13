@@ -3,6 +3,7 @@ import os
 import random
 import re
 import time
+import concurrent.futures
 from typing import Any, Dict, List, Optional
 
 import vertexai
@@ -34,6 +35,23 @@ class GeminiAIMapper:
         if not project_id:
             raise ValueError("GCP_PROJECT_ID is not set. Please configure it in a .env file.")
 
+        # Resolve GOOGLE_APPLICATION_CREDENTIALS to an absolute path if it is set or fallback
+        sa_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH") or "./firebase-credentials.json"
+        if sa_path:
+            if not os.path.isabs(sa_path):
+                # Check CWD
+                if os.path.exists(sa_path):
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.abspath(sa_path)
+                else:
+                    # Try relative to the backend base folder
+                    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    possible_path = os.path.join(backend_dir, sa_path)
+                    if os.path.exists(possible_path):
+                        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = possible_path
+            else:
+                if os.path.exists(sa_path):
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = sa_path
+
         # Initialize Vertex AI SDK
         vertexai.init(project=project_id, location=location)
 
@@ -53,11 +71,20 @@ class GeminiAIMapper:
 
         for attempt in range(max_retries + 1):
             try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=GenerationConfig(temperature=temperature),
-                )
-                return self._extract_text(response)
+                executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                try:
+                    future = executor.submit(
+                        self.model.generate_content,
+                        prompt,
+                        generation_config=GenerationConfig(temperature=temperature),
+                    )
+                    try:
+                        response = future.result(timeout=15.0)
+                        return self._extract_text(response)
+                    except concurrent.futures.TimeoutError:
+                        raise AIMapperError("LLM pipeline exceeded 15 seconds timeout. Fallback to manual mapping required.")
+                finally:
+                    executor.shutdown(wait=False)
             except Exception as exc:
                 err_str = str(exc)
                 is_quota = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
@@ -148,15 +175,24 @@ class GeminiAIMapper:
                     "Return ONLY one valid JSON object matching the schema."
                 )
             try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=GenerationConfig(
-                        temperature=0,
-                        response_mime_type="application/json",
-                    ),
-                )
-                text = self._extract_text(response)
-                return self._parse_json(text)
+                executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                try:
+                    future = executor.submit(
+                        self.model.generate_content,
+                        prompt,
+                        generation_config=GenerationConfig(
+                            temperature=0,
+                            response_mime_type="application/json",
+                        ),
+                    )
+                    try:
+                        response = future.result(timeout=15.0)
+                        text = self._extract_text(response)
+                        return self._parse_json(text)
+                    except concurrent.futures.TimeoutError:
+                        raise AIMapperError("LLM pipeline exceeded 15 seconds timeout. Fallback to manual mapping required.")
+                finally:
+                    executor.shutdown(wait=False)
             except Exception as exc:  # noqa: BLE001
                 err_str = str(exc)
                 last_error = exc
@@ -164,6 +200,8 @@ class GeminiAIMapper:
 
                 if is_quota and attempt == max_retries:
                     raise QuotaExhaustedError(f"Gemini API quota exhausted: {err_str}") from exc
+                if not is_quota:
+                    raise exc
                 if attempt < max_retries:
                     time.sleep(self._retry_delay_seconds(attempt))
 

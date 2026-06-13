@@ -381,10 +381,7 @@ class DataCleaner:
                 parsed = ChunkResponseSchema.model_validate(data)
                 parsed.cleanedRows = self._sanitize_ai_rows(parsed.cleanedRows, file_type)
                 return parsed
-            except QuotaExhaustedError as err:
-                last_error = err
-                break
-            except (AIMapperError, ValidationError, ValueError, TypeError) as err:
+            except (ValidationError, ValueError, TypeError) as err:
                 last_error = err
 
         fallback_rows = self._sanitize_ai_rows(chunk_rows, file_type)
@@ -513,30 +510,24 @@ class DataCleaner:
         if len(ordered) >= 2 and ordered[0][1] >= ordered[1][1] + 2:
             return ordered[0][0]
 
-        try:
-            data = self.mapper.classify_file_type(
-                input_columns=list(df.columns),
-                sample_rows=df.head(8).fillna("").to_dict(orient="records"),
-            )
-            file_type = data.get("file_type")
-            if file_type in CANONICAL_SCHEMAS:
-                return file_type
-        except AIMapperError:
-            pass
+        data = self.mapper.classify_file_type(
+            input_columns=list(df.columns),
+            sample_rows=df.head(8).fillna("").to_dict(orient="records"),
+        )
+        file_type = data.get("file_type")
+        if file_type in CANONICAL_SCHEMAS:
+            return file_type
 
         return ordered[0][0] if ordered else "beneficiary"
 
     def _get_column_mapping_from_gemini(self, df: pd.DataFrame, file_type: str) -> Dict[str, str]:
-        try:
-            result = self.mapper.map_columns(
-                file_type=file_type,
-                canonical_schema=CANONICAL_SCHEMAS[file_type],
-                required_fields=REQUIRED_FIELDS[file_type],
-                input_columns=list(df.columns),
-                sample_rows=df.head(20).fillna("").to_dict(orient="records"),
-            )
-        except AIMapperError:
-            result = {"column_mapping": {}}
+        result = self.mapper.map_columns(
+            file_type=file_type,
+            canonical_schema=CANONICAL_SCHEMAS[file_type],
+            required_fields=REQUIRED_FIELDS[file_type],
+            input_columns=list(df.columns),
+            sample_rows=df.head(20).fillna("").to_dict(orient="records"),
+        )
 
         raw_map = result.get("column_mapping", {})
         safe_map: Dict[str, str] = {}
@@ -596,11 +587,8 @@ class DataCleaner:
         }
 
         if unresolved:
-            try:
-                out = self.mapper.canonicalize_districts(sorted(unresolved))
-                model_map = out.get("mapping", {})
-            except AIMapperError:
-                model_map = {}
+            out = self.mapper.canonicalize_districts(sorted(unresolved))
+            model_map = out.get("mapping", {})
 
             def gem_map(value: Any) -> Any:
                 nonlocal fixed

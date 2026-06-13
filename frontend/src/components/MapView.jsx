@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, MarkerClusterer, DirectionsRenderer } from '@react-google-maps/api';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../AppContext';
 import { apiFetch } from '../utils/api';
@@ -81,8 +81,8 @@ const MapPinningModal = ({ isOpen, onClose, locationName, initialLat, initialLng
               We couldn't automatically locate this area. Click on the map to pin it manually.
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'var(--clr-background)', border: '1px solid var(--glass-border)', color: 'var(--clr-text)', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className="ph ph-x" style={{ fontSize: '1.2rem' }}></i>
+          <button onClick={onClose} aria-label="Close location pin dialog" style={{ background: 'var(--clr-background)', border: '1px solid var(--glass-border)', color: 'var(--clr-text)', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ph ph-x" aria-hidden="true" style={{ fontSize: '1.2rem' }}></i>
           </button>
         </div>
         
@@ -116,7 +116,9 @@ const MapPinningModal = ({ isOpen, onClose, locationName, initialLat, initialLng
 const MapView = () => {
   const { API_BASE_URL, sessionData, mapFocusPriorityId, setMapFocusPriorityId } = useAppContext();
   const [priorities, setPriorities] = useState([]);
+  const [matches, setMatches] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [directionsResponse, setDirectionsResponse] = useState(null);
   const [activeMarker, setActiveMarker] = useState(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
@@ -130,14 +132,22 @@ const MapView = () => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
   });
 
-  const fetchPriorities = async () => {
+  const fetchData = async () => {
     if (!sessionId) return;
     setLoadingData(true);
     try {
-      const response = await apiFetch(`${API_BASE_URL}/priority/${sessionId}`);
-      const data = await response.json();
-      if (data.status === 'success') {
-        setPriorities(data.priorities || []);
+      const [priRes, matchRes] = await Promise.all([
+        apiFetch(`${API_BASE_URL}/priority/${sessionId}`),
+        apiFetch(`${API_BASE_URL}/match/${sessionId}`)
+      ]);
+      const priData = await priRes.json();
+      const matchData = await matchRes.json();
+      
+      if (priData.status === 'success') {
+        setPriorities(priData.priorities || []);
+      }
+      if (matchData.status === 'success') {
+        setMatches(matchData.matches || []);
       }
     } catch (err) {
       console.error('Failed to fetch map data', err);
@@ -181,7 +191,7 @@ const MapView = () => {
         toast.success(`Position set for ${pinModalLocation.location}`);
         setPinModalOpen(false);
         setPinModalLocation(null);
-        fetchPriorities();
+        fetchData();
       } else {
         toast.error(data.message || 'Failed to save position.');
       }
@@ -196,7 +206,7 @@ const MapView = () => {
 
   useEffect(() => {
     if (sessionId) {
-      fetchPriorities();
+      fetchData();
     }
   }, [sessionId]);
 
@@ -209,6 +219,39 @@ const MapView = () => {
       }
     }
   }, [mapFocusPriorityId, priorities, setMapFocusPriorityId]);
+
+  // Fetch directions when activeMarker changes
+  useEffect(() => {
+    if (!activeMarker || matches.length === 0 || !window.google) {
+      setDirectionsResponse(null);
+      return;
+    }
+
+    // Find a match for this location to get source coordinates
+    const relevantMatch = matches.find(m => m.beneficiary.toLowerCase() === activeMarker.location.toLowerCase());
+    
+    if (relevantMatch && relevantMatch.source_lat && relevantMatch.source_lng) {
+      const directionsService = new window.google.maps.DirectionsService();
+      
+      directionsService.route(
+        {
+          origin: { lat: relevantMatch.source_lat, lng: relevantMatch.source_lng },
+          destination: { lat: activeMarker.lat, lng: activeMarker.lng },
+          travelMode: window.google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === window.google.maps.DirectionsStatus.OK) {
+            setDirectionsResponse(result);
+          } else {
+            console.error(`error fetching directions ${result}`);
+            setDirectionsResponse(null);
+          }
+        }
+      );
+    } else {
+      setDirectionsResponse(null);
+    }
+  }, [activeMarker, matches]);
 
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
@@ -286,7 +329,7 @@ const MapView = () => {
             <h2 style={{ fontSize: '2.2rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--clr-text)' }}>Geospatial Heatmap</h2>
             <p style={{ color: 'var(--clr-text-muted)', marginTop: '0.2rem', fontSize: '0.95rem' }}>Live tracking of priority crisis zones and resource logistics.</p>
           </div>
-          <button className="btn primary" onClick={fetchPriorities} disabled={loadingData} style={{ boxShadow: '0 8px 16px rgba(13, 115, 119, 0.2)' }}>
+          <button className="btn primary" onClick={fetchData} disabled={loadingData} style={{ boxShadow: '0 8px 16px rgba(13, 115, 119, 0.2)' }}>
              <i className={`ph-fill ph-arrows-clockwise ${loadingData ? 'spin' : ''}`}></i> Sync Map Data
           </button>
         </div>
@@ -368,7 +411,25 @@ const MapView = () => {
 
           {/* Right Area: Map */}
           <div className="map-canvas-container">
-            <div style={{ borderRadius: '20px', overflow: 'hidden', height: '100%', width: '100%' }}>
+            <div style={{ borderRadius: '20px', overflow: 'hidden', height: '100%', width: '100%', position: 'relative' }}>
+              {/* Skeleton shimmer shown while map data is loading */}
+              {loadingData && priorities.length === 0 && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute', inset: 0, zIndex: 10,
+                    borderRadius: '20px',
+                    background: 'linear-gradient(90deg, var(--clr-surface) 25%, var(--glass-bg) 50%, var(--clr-surface) 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 1.6s infinite',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexDirection: 'column', gap: '0.75rem', color: 'var(--clr-text-muted)'
+                  }}
+                >
+                  <i className="ph ph-map-trifold" style={{ fontSize: '3rem', opacity: 0.3 }} aria-hidden="true"></i>
+                  <span style={{ fontSize: '0.9rem', opacity: 0.5 }}>Loading map data&hellip;</span>
+                </div>
+              )}
               <GoogleMap
                 mapContainerStyle={containerStyle}
                 center={activeMarker ? { lat: activeMarker.lat, lng: activeMarker.lng } : center}
@@ -379,17 +440,34 @@ const MapView = () => {
                   zoomControl: true,
                 }}
               >
-                {priorities.map((item) => (
-                  <Marker
-                    key={item.id}
-                    position={{ lat: item.lat, lng: item.lng }}
-                    icon={getMarkerIcon(item.score)}
-                    onClick={() => setActiveMarker(item)}
-                    animation={activeMarker?.id === item.id ? window.google.maps.Animation.BOUNCE : (hoveredMarkerId === item.id ? window.google.maps.Animation.BOUNCE : null)}
+                <MarkerClusterer>
+                  {(clusterer) =>
+                    priorities.map((item) => (
+                      <Marker
+                        key={item.id}
+                        position={{ lat: item.lat, lng: item.lng }}
+                        icon={getMarkerIcon(item.score)}
+                        clusterer={clusterer}
+                        onClick={() => setActiveMarker(item)}
+                        animation={activeMarker?.id === item.id ? window.google.maps.Animation.BOUNCE : (hoveredMarkerId === item.id ? window.google.maps.Animation.BOUNCE : null)}
+                      />
+                    ))
+                  }
+                </MarkerClusterer>
+
+                {directionsResponse && (
+                  <DirectionsRenderer
+                    directions={directionsResponse}
+                    options={{
+                      suppressMarkers: true,
+                      polylineOptions: {
+                        strokeColor: isDarkMode ? '#60A5FA' : '#3B82F6',
+                        strokeWeight: 5,
+                        strokeOpacity: 0.8
+                      }
+                    }}
                   />
-                ))}
-
-
+                )}
               </GoogleMap>
             </div>
 
@@ -400,6 +478,7 @@ const MapView = () => {
                   <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--clr-text)' }}>{activeMarker.location}</h4>
                   <button 
                     onClick={() => setActiveMarker(null)} 
+                    aria-label={`Close ${activeMarker?.location} detail card`}
                     style={{ 
                       background: 'rgba(0,0,0,0.05)', 
                       border: 'none', 
@@ -417,7 +496,7 @@ const MapView = () => {
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
                   >
-                    <i className="ph ph-x" style={{ fontSize: '1.05rem', fontWeight: 'bold' }}></i>
+                    <i className="ph ph-x" aria-hidden="true" style={{ fontSize: '1.05rem', fontWeight: 'bold' }}></i>
                   </button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -466,6 +545,35 @@ const MapView = () => {
 
         </div>
       </div>
+
+      {/* Accessible fallback table for screen readers — visually hidden */}
+      {priorities.length > 0 && (
+        <div className="sr-only" aria-label="Crisis zone data table">
+          <h3>Crisis Zones Summary</h3>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Location</th>
+                <th scope="col">Urgency Level</th>
+                <th scope="col">Priority Score</th>
+                <th scope="col">Civilians Affected</th>
+                <th scope="col">Top Need</th>
+              </tr>
+            </thead>
+            <tbody>
+              {priorities.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.location}</td>
+                  <td>{item.urgency_level}</td>
+                  <td>{item.score} / 100</td>
+                  <td>{item.affected}</td>
+                  <td>{item.top_need || 'General'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       
       <MapPinningModal 
         isOpen={pinModalOpen} 

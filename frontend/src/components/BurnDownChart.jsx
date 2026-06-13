@@ -57,7 +57,8 @@ const BurnDownChart = () => {
       .then(res => res.json())
       .then(data => {
         if (!cancelled && data.forecasts) {
-          setForecasts(data.forecasts);
+          const sortedForecasts = [...data.forecasts].sort((a, b) => a.days_remaining - b.days_remaining);
+          setForecasts(sortedForecasts);
         }
       })
       .catch(err => console.error('Failed to fetch forecast', err))
@@ -68,8 +69,8 @@ const BurnDownChart = () => {
 
   if (!sessionId) return null;
 
-  // Use all forecast items on the chart
-  const chartForecasts = forecasts;
+  // Use top 5 critical forecast items on the chart to prevent clutter
+  const chartForecasts = forecasts.slice(0, 5);
 
   // Transform forecast data for Recharts
   const chartData = [];
@@ -99,7 +100,7 @@ const BurnDownChart = () => {
           Resource Burn-Down Forecast
         </h3>
         <span style={{ fontSize: '0.8rem', color: 'var(--clr-text-muted)', fontWeight: 500 }}>
-          7-day projection · {chartForecasts.length} items
+          7-day projection · {forecasts.length > 5 ? `Top 5 critical items` : `${forecasts.length} items`}
         </span>
       </div>
 
@@ -123,7 +124,7 @@ const BurnDownChart = () => {
 
             <div style={{ width: '100%', height: 260 }} role="img" aria-label="Resource Burn-Down Forecast Chart">
               <ResponsiveContainer>
-                <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <LineChart data={chartData} margin={{ top: 5, right: 45, left: -10, bottom: 5 }}>
                   <XAxis 
                     dataKey="day" 
                     tick={{ fontSize: 12, fill: 'var(--clr-text-muted)' }} 

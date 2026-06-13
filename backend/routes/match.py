@@ -18,7 +18,8 @@ def get_supply_match(session_id):
         beneficiaries = store.get_session_rows(session_id, file_type="beneficiary")
         inventory = store.get_session_rows(session_id, file_type="inventory")
         
-        matches = calculate_real_matches(beneficiaries, inventory)
+        overrides = store.get_location_overrides(session_id)
+        matches = calculate_real_matches(beneficiaries, inventory, location_overrides=overrides)
         
         # Fallback to demo matches if no data is uploaded in this session yet
         if not matches:
@@ -31,7 +32,9 @@ def get_supply_match(session_id):
                     "unit": "Kits",
                     "source": "Main Warehouse A",
                     "reasoning": "Prioritized due to 95% capacity alert and contaminated local supply.",
-                    "urgency": "High"
+                    "urgency": "High",
+                    "source_lat": 13.0827, "source_lng": 80.2707,
+                    "dest_lat": 13.0714, "dest_lng": 80.2376
                 },
                 {
                     "id": "match-2",
@@ -41,7 +44,9 @@ def get_supply_match(session_id):
                     "unit": "Boxes",
                     "source": "Red Cross Depot",
                     "reasoning": "Highest concentration of vulnerable elderly beneficiaries.",
-                    "urgency": "High"
+                    "urgency": "High",
+                    "source_lat": 13.0400, "source_lng": 80.2300,
+                    "dest_lat": 12.9815, "dest_lng": 80.2180
                 },
                 {
                     "id": "match-3",
@@ -51,7 +56,9 @@ def get_supply_match(session_id):
                     "unit": "Items",
                     "source": "Main Warehouse B",
                     "reasoning": "Inventory expiry approaching; optimal allocation to nearest shelter.",
-                    "urgency": "Medium"
+                    "urgency": "Medium",
+                    "source_lat": 12.9500, "source_lng": 80.1400,
+                    "dest_lat": 12.9249, "dest_lng": 80.1000
                 }
             ]
         

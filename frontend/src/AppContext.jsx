@@ -11,6 +11,8 @@ import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, googleProvider, db } from './firebase';
 import { apiFetch } from './utils/api';
+import { addSessionToHistory, incrementUsage } from './utils/usageTracker';
+
 
 export const AppContext = createContext();
 
@@ -41,7 +43,7 @@ export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
   const extractErrorMessage = (payload, fallbackMessage) => {
     if (!payload) return fallbackMessage;
@@ -261,6 +263,17 @@ export const AppProvider = ({ children }) => {
       
       // Clear cleanedData to force DashboardTabs and DataCharts to fetch fresh data from the server
       setCleanedData(null);
+
+      // Track session history and upload stats for Profile page
+      const totalRecords = responses.reduce((sum, r) => sum + (r?.recordCount || 0), 0);
+      const fileTypes = responses.map((r) => r?.category).filter(Boolean);
+      addSessionToHistory(batchSessionId, {
+        recordCount: totalRecords,
+        fileTypes,
+        label: `Upload – ${new Date().toLocaleString()}`,
+      });
+      incrementUsage('uploads');
+
       setChecklistStep?.(4);
       setChecklistSuccess(true);
     } catch (error) {

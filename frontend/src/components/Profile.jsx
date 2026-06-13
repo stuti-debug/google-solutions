@@ -152,12 +152,12 @@ const Profile = () => {
             </div>
 
             <div className="profile-actions">
-              <button className="btn primary animate-pulse" onClick={() => navigate('screen-dashboard')}>
-                <i className="ph ph-chart-bar"></i>
+              <button className="btn primary animate-pulse" aria-label="Go to Dashboard" onClick={() => navigate('screen-dashboard')}>
+                <i className="ph ph-chart-bar" aria-hidden="true"></i>
                 Dashboard
               </button>
-              <button className="btn secondary" style={{ borderColor: 'rgba(255, 80, 80, 0.4)', color: '#ff6b6b' }} onClick={logout}>
-                <i className="ph ph-sign-out"></i>
+              <button className="btn secondary" aria-label="Sign out" style={{ borderColor: 'rgba(255, 80, 80, 0.4)', color: '#ff6b6b' }} onClick={logout}>
+                <i className="ph ph-sign-out" aria-hidden="true"></i>
                 Sign Out
               </button>
             </div>
@@ -305,8 +305,8 @@ const Profile = () => {
                 <div className="profile-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3>Recent Share Logs</h3>
                   {shareLog.length > 0 && (
-                    <button className="btn minimal" style={{ color: '#ff6b6b', fontSize: '0.8rem' }} onClick={clearShares}>
-                      <i className="ph ph-trash"></i> Clear Logs
+                    <button className="btn minimal" aria-label="Clear share logs" style={{ color: '#ff6b6b', fontSize: '0.8rem' }} onClick={clearShares}>
+                      <i className="ph ph-trash" aria-hidden="true"></i> Clear Logs
                     </button>
                   )}
                 </div>

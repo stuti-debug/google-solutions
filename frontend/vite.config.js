@@ -4,6 +4,46 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    port: 5173,
+    proxy: {
+      '/data': 'http://127.0.0.1:8000',
+      '/match': 'http://127.0.0.1:8000',
+      '/status': 'http://127.0.0.1:8000',
+      '/stats': 'http://127.0.0.1:8000',
+      '/nlq': 'http://127.0.0.1:8000',
+      '/query': 'http://127.0.0.1:8000',
+      '/clean': 'http://127.0.0.1:8000',
+      '/priority': 'http://127.0.0.1:8000',
+      '/alerts': 'http://127.0.0.1:8000',
+      '/forecast': 'http://127.0.0.1:8000',
+      '/insights': 'http://127.0.0.1:8000',
+      '/export': 'http://127.0.0.1:8000',
+      '/health': 'http://127.0.0.1:8000',
+      '/reports': 'http://127.0.0.1:8000',
+      '/sitrep': 'http://127.0.0.1:8000',
+    }
+  },
+  preview: {
+    port: 4173,
+    proxy: {
+      '/data': 'http://127.0.0.1:8000',
+      '/match': 'http://127.0.0.1:8000',
+      '/status': 'http://127.0.0.1:8000',
+      '/stats': 'http://127.0.0.1:8000',
+      '/nlq': 'http://127.0.0.1:8000',
+      '/query': 'http://127.0.0.1:8000',
+      '/clean': 'http://127.0.0.1:8000',
+      '/priority': 'http://127.0.0.1:8000',
+      '/alerts': 'http://127.0.0.1:8000',
+      '/forecast': 'http://127.0.0.1:8000',
+      '/insights': 'http://127.0.0.1:8000',
+      '/export': 'http://127.0.0.1:8000',
+      '/health': 'http://127.0.0.1:8000',
+      '/reports': 'http://127.0.0.1:8000',
+      '/sitrep': 'http://127.0.0.1:8000',
+    }
+  },
   plugins: [
     react(),
     VitePWA({
@@ -69,12 +109,17 @@ export default defineConfig({
               cacheName: 'api-data-cache',
               networkTimeoutSeconds: 5,
               expiration: {
+                cacheName: 'api-cache',
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
               }
             }
           }
         ]
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module'
       }
     })
   ],

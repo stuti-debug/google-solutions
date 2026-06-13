@@ -2656,7 +2656,7 @@ nav {
 /* Days-of-Cover Pills */
 .burndown-pills {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 0.75rem;
 }
 
@@ -2698,9 +2698,14 @@ nav {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--clr-text);
-  white-space: nowrap;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
+  padding-right: 0.25rem;
 }
 
 .burndown-pill-stock {

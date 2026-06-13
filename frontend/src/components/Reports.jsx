@@ -310,17 +310,21 @@ const Reports = () => {
               <div 
                 key={rt.id} 
                 className="report-type-card table-row-animate" 
+                role="button"
+                tabIndex={0}
+                aria-label={`Generate ${rt.label} report: ${rt.description}`}
                 onClick={() => generateReport(rt.id)} 
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && generateReport(rt.id)}
                 style={{ '--rt-color': rt.color, animationDelay: `${idx * 80}ms` }}
               >
                 <div className="report-type-icon" style={{ background: `${rt.color}12`, color: rt.color }}>
-                  <i className={`ph-fill ${rt.icon}`}></i>
+                  <i className={`ph-fill ${rt.icon}`} aria-hidden="true"></i>
                 </div>
                 <div className="report-type-info">
                   <h4>{rt.label}</h4>
                   <p>{rt.description}</p>
                 </div>
-                <i className="ph ph-arrow-right report-type-arrow"></i>
+                <i className="ph ph-arrow-right report-type-arrow" aria-hidden="true"></i>
               </div>
             ))}
           </div>

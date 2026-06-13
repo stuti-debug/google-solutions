@@ -1,5 +1,6 @@
 import re
 import random
+import math
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 
@@ -43,6 +44,34 @@ def map_need_to_category(need: str) -> str:
         return "Hygiene"
     return "General"
 
+def normalize_location(name: str) -> str:
+    """Standardize location names to resolve fuzzy matches (e.g., abbreviations, casing)."""
+    if not name:
+        return "unknown"
+    n = str(name).lower().strip()
+    # Remove punctuation
+    n = re.sub(r'[^\w\s]', '', n)
+    # Expand common abbreviations
+    n = re.sub(r'\bbr\b', 'bridge', n)
+    n = re.sub(r'\bctr\b', 'center', n)
+    n = re.sub(r'\bste\b', 'suite', n)
+    n = re.sub(r'\bdist\b', 'district', n)
+    # Collapse multiple spaces
+    n = re.sub(r'\s+', ' ', n)
+    return n.strip()
+
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate the great circle distance in kilometers between two points on the earth."""
+    R = 6371.0 # Earth radius in kilometers
+    
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    return R * c
+
 def calculate_real_priorities(beneficiaries: List[Dict[str, Any]], location_overrides: Dict[str, Tuple[float, float]] = None) -> List[Dict[str, Any]]:
     """Calculate dynamic priority scores based on beneficiary need types and counts."""
     if location_overrides is None:
@@ -54,12 +83,18 @@ def calculate_real_priorities(beneficiaries: List[Dict[str, Any]], location_over
     village_groups = defaultdict(list)
     for b in beneficiaries:
         village = get_val(b, "village") or "Unknown Camp"
-        village_groups[village].append(b)
+        norm_village = normalize_location(village)
+        village_groups[norm_village].append((village, b))
 
     priorities = []
     pri_idx = 1
 
-    for village, rows in village_groups.items():
+    for norm_village, rows_data in village_groups.items():
+        # Use the most common original name for display
+        original_names = [rd[0] for rd in rows_data]
+        display_village = max(set(original_names), key=original_names.count)
+        rows = [rd[1] for rd in rows_data]
+        
         total_affected = 0
         needs_count = defaultdict(int)
         pending_count = 0
@@ -115,19 +150,22 @@ def calculate_real_priorities(beneficiaries: List[Dict[str, Any]], location_over
             reasoning = f"Unresolved medical assistance requests for vulnerable elderly and families. Coordination needed."
 
         # Coordinates lookup
-        norm_village = village.lower().strip()
         needs_geocoding = False
         
-        if village in location_overrides:
-            lat, lng = location_overrides[village]
+        # Check overrides using normalized name
+        norm_overrides = {normalize_location(k): v for k, v in location_overrides.items()}
+        if norm_village in norm_overrides:
+            lat, lng = norm_overrides[norm_village]
         else:
-            lat, lng = CHENNAI_COORDS.get(norm_village, (13.0827, 80.2707))
+            # Check CHENNAI_COORDS using normalized name
+            norm_chennai = {normalize_location(k): v for k, v in CHENNAI_COORDS.items()}
+            lat, lng = norm_chennai.get(norm_village, (13.0827, 80.2707))
             if (lat, lng) == (13.0827, 80.2707):
                 needs_geocoding = True
 
         priorities.append({
             "id": f"pri-{pri_idx}",
-            "location": village,
+            "location": display_village,
             "score": score,
             "urgency_level": urgency,
             "affected": total_affected,
@@ -141,15 +179,23 @@ def calculate_real_priorities(beneficiaries: List[Dict[str, Any]], location_over
     # Sort priorities by score descending
     return sorted(priorities, key=lambda x: x["score"], reverse=True)
 
-def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Greedily allocate inventory quantities to satisfy beneficiary need demands."""
+def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items: List[Dict[str, Any]], location_overrides: Dict[str, Tuple[float, float]] = None) -> List[Dict[str, Any]]:
+    """Greedily allocate inventory quantities to satisfy beneficiary need demands, prioritizing closest warehouses."""
+    if location_overrides is None:
+        location_overrides = {}
     if not beneficiaries or not inventory_items:
         return []
 
     # 1. Group demands by village + need category
     demands = defaultdict(int)
+    village_display_names = {}
     for b in beneficiaries:
         village = get_val(b, "village") or "Unknown Camp"
+        norm_village = normalize_location(village)
+        # Store original name for display
+        if norm_village not in village_display_names:
+            village_display_names[norm_village] = village
+            
         need = get_val(b, "need_type") or "General"
         try:
             hh_size = int(get_val(b, "household_size") or 1)
@@ -157,7 +203,7 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
             hh_size = 1
         
         category = map_need_to_category(need)
-        demands[(village, category)] += hh_size
+        demands[(norm_village, category)] += hh_size
 
     # 2. Group inventory by item
     inv_pool = []
@@ -165,6 +211,7 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
         name = get_val(item, "item_name") or "Supplies"
         category = get_val(item, "category") or "General"
         warehouse = get_val(item, "warehouse") or "Main Depot"
+        norm_warehouse = normalize_location(warehouse)
         unit = get_val(item, "unit") or "units"
         try:
             qty = float(get_val(item, "quantity") or 0)
@@ -176,6 +223,7 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
                 "name": name,
                 "category": category,
                 "warehouse": warehouse,
+                "norm_warehouse": norm_warehouse,
                 "unit": unit,
                 "qty": qty
             })
@@ -186,10 +234,36 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
     # Sort demands by largest household size first
     sorted_demands = sorted(demands.items(), key=lambda x: x[1], reverse=True)
 
-    for (village, category), total_needed_people in sorted_demands:
+    for (norm_village, category), total_needed_people in sorted_demands:
+        display_village = village_display_names.get(norm_village, "Unknown Camp")
+        
+        # Determine village coordinates
+        norm_overrides = {normalize_location(k): v for k, v in location_overrides.items()}
+        norm_chennai = {normalize_location(k): v for k, v in CHENNAI_COORDS.items()}
+        
+        if norm_village in norm_overrides:
+            v_lat, v_lng = norm_overrides[norm_village]
+        else:
+            v_lat, v_lng = norm_chennai.get(norm_village, (13.0827, 80.2707))
+
+        # Sort inventory pool by distance to the village
+        def get_inv_distance(item):
+            norm_w = item["norm_warehouse"]
+            if norm_w in norm_overrides:
+                w_lat, w_lng = norm_overrides[norm_w]
+            else:
+                w_lat, w_lng = norm_chennai.get(norm_w, (13.0827, 80.2707))
+            return haversine(v_lat, v_lng, w_lat, w_lng)
+
+        sorted_inv_pool = sorted(inv_pool, key=get_inv_distance)
+
         # Find inventory items in this category
-        for item in inv_pool:
+        for item in sorted_inv_pool:
             if item["qty"] <= 0:
+                continue
+
+            # Prevent self-routing using normalized names
+            if item["norm_warehouse"] == norm_village or get_inv_distance(item) < 0.1:
                 continue
 
             # Check matching category or name overlap
@@ -217,17 +291,28 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
                         urgency = "Medium"
 
                     # Custom reasoning
-                    reasoning = f"Dispatched {int(allocated_qty)} {item['unit']} of {item['name']} from {item['warehouse']} to cover {category} requirements for {total_needed_people} residents at {village}."
+                    dist_km = get_inv_distance(item)
+                    reasoning = f"Dispatched {int(allocated_qty)} {item['unit']} of {item['name']} from {item['warehouse']} ({dist_km:.1f}km away) to cover {category} requirements for {total_needed_people} residents at {display_village}."
+
+                    norm_w = item["norm_warehouse"]
+                    if norm_w in norm_overrides:
+                        w_lat, w_lng = norm_overrides[norm_w]
+                    else:
+                        w_lat, w_lng = norm_chennai.get(norm_w, (13.0827, 80.2707))
 
                     matches.append({
                         "id": f"match-{match_idx}",
-                        "beneficiary": village,
+                        "beneficiary": display_village,
                         "need": item["name"],
                         "allocated": int(allocated_qty),
                         "unit": item["unit"],
                         "source": item["warehouse"],
                         "reasoning": reasoning,
-                        "urgency": urgency
+                        "urgency": urgency,
+                        "source_lat": round(w_lat, 5),
+                        "source_lng": round(w_lng, 5),
+                        "dest_lat": round(v_lat, 5),
+                        "dest_lng": round(v_lng, 5)
                     })
                     match_idx += 1
 

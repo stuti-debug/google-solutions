@@ -39,16 +39,16 @@ def _gather_session_context(session_id: str) -> Dict[str, Any]:
              "reasoning": "Recent distribution completed successfully. Inventory levels nominal."},
         ]
 
-    matches = calculate_real_matches(beneficiaries, inventory)
+    matches = calculate_real_matches(beneficiaries, inventory, location_overrides=overrides)
     # Supply match data (demo fallback)
     if not matches:
         matches = [
             {"source": "Main Warehouse A", "beneficiary": "Chetpet Camp", "need": "Water (Critical)",
-             "allocated": 500, "unit": "Kits", "urgency": "High"},
+             "allocated": 500, "unit": "Kits", "urgency": "High", "source_lat": 13.0827, "source_lng": 80.2707, "dest_lat": 13.0714, "dest_lng": 80.2376},
             {"source": "Red Cross Depot", "beneficiary": "Velachery Sector 4", "need": "Medical Supplies",
-             "allocated": 150, "unit": "Boxes", "urgency": "High"},
+             "allocated": 150, "unit": "Boxes", "urgency": "High", "source_lat": 13.0400, "source_lng": 80.2300, "dest_lat": 12.9815, "dest_lng": 80.2180},
             {"source": "Main Warehouse B", "beneficiary": "Tambaram Shelter", "need": "Blankets",
-             "allocated": 300, "unit": "Items", "urgency": "Medium"},
+             "allocated": 300, "unit": "Items", "urgency": "Medium", "source_lat": 12.9500, "source_lng": 80.1400, "dest_lat": 12.9249, "dest_lng": 80.1000},
         ]
 
     return {
