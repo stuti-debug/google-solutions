@@ -41,20 +41,24 @@ def require_auth():
         return
     if request.path == "/health":
         return
-        
+
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return jsonify({"code": "UNAUTHORIZED", "message": "Missing or invalid Authorization header."}), 401
-        
+
     token = auth_header.split(" ")[1]
     try:
-        # Initialize an app instance for auth verification if not exists
+        # Use the default Firebase Admin app (already initialized with real credentials in firebase.py)
+        # Do NOT create a separate app with a hardcoded projectId — that causes 401 token verification failures
         try:
-            auth_app = firebase_admin.get_app('auth_app')
+            default_app = firebase_admin.get_app()
         except ValueError:
-            auth_app = firebase_admin.initialize_app(options={'projectId': 'crisisgrid-web'}, name='auth_app')
-            
-        decoded_token = firebase_auth.verify_id_token(token, app=auth_app)
+            # Default app not yet initialized — trigger initialization now
+            from core.firebase import init_firebase
+            init_firebase()
+            default_app = firebase_admin.get_app()
+
+        decoded_token = firebase_auth.verify_id_token(token, app=default_app)
         request.user = decoded_token
     except Exception as e:
         return jsonify({"code": "UNAUTHORIZED", "message": f"Invalid token: {e}"}), 401

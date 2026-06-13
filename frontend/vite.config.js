@@ -109,7 +109,6 @@ export default defineConfig({
               cacheName: 'api-data-cache',
               networkTimeoutSeconds: 5,
               expiration: {
-                cacheName: 'api-cache',
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
               }
@@ -118,8 +117,7 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true,
-        type: 'module'
+        enabled: false
       }
     })
   ],

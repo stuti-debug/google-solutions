@@ -19,6 +19,14 @@ CHENNAI_COORDS = {
     "tambaram": (12.9249, 80.1000),
 }
 
+# Keywords that indicate a location is a crisis zone (not a proper supply depot)
+# Any inventory item whose warehouse name contains these keywords should NOT be used as a primary supply source
+CRISIS_ZONE_KEYWORDS = {
+    "camp", "shelter", "relief center", "relief camp", "flood zone",
+    "evacuation", "refugee", "displaced", "crisis zone", "temporary",
+    "bridge", "transit", "staging",
+}
+
 def get_val(row: Dict[str, Any], *keys: str) -> Any:
     """Case-insensitive key getter for database rows."""
     for key in keys:
@@ -139,15 +147,37 @@ def calculate_real_priorities(beneficiaries: List[Dict[str, Any]], location_over
         else:
             urgency = "Low"
 
-        # Generate a dynamic reason string
+        # Generate a fully data-driven reasoning string unique to this zone
         top_needs = sorted(needs_count.items(), key=lambda x: x[1], reverse=True)
-        needs_str = ", ".join([f"{k} ({v} requests)" for k, v in top_needs[:2]])
+        top_need_name = top_needs[0][0] if top_needs else "General"
+        top_need_count = top_needs[0][1] if top_needs else 0
+        needs_str = ", ".join([f"{k} ({v} req.)" for k, v in top_needs[:3]])
         
-        reasoning = f"Priority calculated from {len(rows)} records. Top needs: {needs_str}. Total affected: {total_affected} civilians."
-        if has_water_need and urgency in ("Critical", "High"):
-            reasoning = f"Critical water safety & access alerts reported. {total_affected} residents affected. Requires immediate delivery."
-        elif has_medical_need and pending_count > 0:
-            reasoning = f"Unresolved medical assistance requests for vulnerable elderly and families. Coordination needed."
+        # Build a specific insight tailored to the zone's situation
+        if urgency == "Critical":
+            primary = f"CRITICAL: {top_need_count} active {top_need_name} request(s) among {total_affected} civilians."
+            if pending_count > 0:
+                primary += f" {pending_count} case(s) still pending resolution."
+            if has_water_need and has_medical_need:
+                primary += " Both water safety and medical support are simultaneously required."
+            elif has_water_need:
+                primary += " Water access is the primary bottleneck — immediate supply dispatch required."
+            elif has_medical_need:
+                primary += " Medical supply shortfall is the primary risk — first aid kits and medicines needed urgently."
+        elif urgency == "High":
+            primary = f"HIGH PRIORITY: {total_affected} residents with unmet {top_need_name} needs ({top_need_count} requests)."
+            if pending_count > 0:
+                primary += f" {pending_count} pending case(s) at risk of escalation."
+        elif urgency == "Medium":
+            primary = f"Moderate need: {total_affected} residents, primarily requiring {top_need_name}."
+            if pending_count > 0:
+                primary += f" Monitor {pending_count} pending case(s) to prevent escalation."
+            else:
+                primary += " Situation stable but supply refresh recommended within 48 hours."
+        else:
+            primary = f"Low urgency: {total_affected} residents. Top need: {top_need_name} ({top_need_count} request(s)). No immediate action required."
+        
+        reasoning = f"{primary} Full breakdown: {needs_str}."
 
         # Coordinates lookup
         needs_geocoding = False
@@ -219,13 +249,17 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
             qty = 0
 
         if qty > 0:
+            norm_w_lower = norm_warehouse.lower()
+            # Detect if this warehouse is actually a crisis zone (not a real depot)
+            is_crisis_zone = any(kw in norm_w_lower for kw in CRISIS_ZONE_KEYWORDS)
             inv_pool.append({
                 "name": name,
                 "category": category,
                 "warehouse": warehouse,
                 "norm_warehouse": norm_warehouse,
                 "unit": unit,
-                "qty": qty
+                "qty": qty,
+                "is_crisis_zone": is_crisis_zone,
             })
 
     matches = []
@@ -257,9 +291,32 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
 
         sorted_inv_pool = sorted(inv_pool, key=get_inv_distance)
 
-        # Find inventory items in this category
-        for item in sorted_inv_pool:
+        def try_allocate(pool):
+            """Try to allocate from the given pool, return True if successful."""
+            nonlocal match_idx
+            for item in pool:
+                if item["qty"] <= 0:
+                    continue
+                # Prevent self-routing using normalized names
+                if item["norm_warehouse"] == norm_village or get_inv_distance(item) < 0.1:
+                    continue
+                # Check matching category or name overlap
+                is_match = (item["category"].lower() == category.lower()) or (category.lower() in item["name"].lower())
+                if is_match:
+                    return item
+            return None
+
+        # First pass: only use real depots (non-crisis-zone warehouses)
+        real_depot_pool = [i for i in sorted_inv_pool if not i.get("is_crisis_zone", False)]
+        # Second pass fallback: use crisis-zone warehouses only if no real depot can help
+        fallback_pool = [i for i in sorted_inv_pool if i.get("is_crisis_zone", False)]
+
+        # Find inventory items in this category (prefer real depots, fallback to crisis zones)
+        for item in real_depot_pool + fallback_pool:
             if item["qty"] <= 0:
+                continue
+            # Skip crisis-zone warehouses if a real depot match was already found
+            if item.get("is_crisis_zone") and try_allocate(real_depot_pool):
                 continue
 
             # Prevent self-routing using normalized names
@@ -292,7 +349,8 @@ def calculate_real_matches(beneficiaries: List[Dict[str, Any]], inventory_items:
 
                     # Custom reasoning
                     dist_km = get_inv_distance(item)
-                    reasoning = f"Dispatched {int(allocated_qty)} {item['unit']} of {item['name']} from {item['warehouse']} ({dist_km:.1f}km away) to cover {category} requirements for {total_needed_people} residents at {display_village}."
+                    resident_word = "resident" if total_needed_people == 1 else "residents"
+                    reasoning = f"Dispatched {int(allocated_qty)} {item['unit']} of {item['name']} from {item['warehouse']} ({dist_km:.1f}km away) to cover {category} requirements for {total_needed_people} {resident_word} at {display_village}."
 
                     norm_w = item["norm_warehouse"]
                     if norm_w in norm_overrides:

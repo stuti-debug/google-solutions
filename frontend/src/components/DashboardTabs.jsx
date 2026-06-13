@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../AppContext';
 import { apiFetch } from '../utils/api';
@@ -32,7 +32,7 @@ const TAB_CONFIG = {
 };
 
 const DashboardTabs = () => {
-  const { cleanedData, sessionData, API_BASE_URL } = useAppContext();
+  const { cleanedData, sessionData, API_BASE_URL, bumpDataVersion } = useAppContext();
 
   const determineInitialTab = () => {
     const fileType = String(cleanedData?.fileType || '').toLowerCase();
@@ -49,6 +49,30 @@ const DashboardTabs = () => {
   const [editingCell, setEditingCell] = useState(null); // { rowIndex, field }
   const [editValue, setEditValue] = useState('');
   const itemsPerPage = 10;
+  // Tracks last tap info for mobile double-tap detection
+  const lastTapRef = useRef({ rowIndex: null, field: null, time: 0 });
+
+  // Called by both onDoubleClick (desktop) and onTouchEnd (mobile)
+  const activateEdit = (rowIndex, field, currentValue) => {
+    setEditingCell({ rowIndex, field });
+    setEditValue(currentValue != null ? String(currentValue) : '');
+  };
+
+  // Detect double-tap on mobile (two taps within 300ms on the same cell)
+  const handleCellTap = (e, row, h) => {
+    // Don't interfere if already editing
+    if (editingCell) return;
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last.rowIndex === row._row_index && last.field === h && now - last.time < 300) {
+      // Second tap on same cell within 300ms → trigger edit
+      e.preventDefault();
+      activateEdit(row._row_index, h, row[h]);
+      lastTapRef.current = { rowIndex: null, field: null, time: 0 };
+    } else {
+      lastTapRef.current = { rowIndex: row._row_index, field: h, time: now };
+    }
+  };
 
   const handleCellSave = (row, header, newValue) => {
     const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
@@ -98,6 +122,8 @@ const DashboardTabs = () => {
           toast.error(`Failed to update: ${data.message}`);
         } else {
           toast.success("Cell updated successfully!");
+          // Notify all other dashboard components to re-fetch with the new data
+          bumpDataVersion();
         }
       })
       .catch((err) => {
@@ -309,11 +335,10 @@ const DashboardTabs = () => {
                       return (
                         <td 
                           key={j}
-                          onDoubleClick={() => {
-                            setEditingCell({ rowIndex: row._row_index, field: h });
-                            setEditValue(row[h] != null ? String(row[h]) : '');
-                          }}
+                          onDoubleClick={() => activateEdit(row._row_index, h, row[h])}
+                          onTouchEnd={(e) => handleCellTap(e, row, h)}
                           style={{ cursor: 'pointer' }}
+                          title="Double-tap to edit"
                         >
                           {isEditing ? (
                             <input
@@ -377,15 +402,17 @@ const DashboardTabs = () => {
                 className="pagination-btn"
                 onClick={handlePrev}
                 disabled={currentPage === 1}
+                aria-label="Previous page"
               >
-                <i className="ph ph-caret-left"></i>
+                <i className="ph ph-caret-left" aria-hidden="true"></i>
               </button>
               <button
                 className="pagination-btn"
                 onClick={handleNext}
                 disabled={currentPage === totalPages}
+                aria-label="Next page"
               >
-                <i className="ph ph-caret-right"></i>
+                <i className="ph ph-caret-right" aria-hidden="true"></i>
               </button>
             </div>
           </div>

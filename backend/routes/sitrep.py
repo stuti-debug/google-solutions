@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request
 
 from core.security import validate_session_id, verify_session_ownership
 from core.app_globals import store
-from core.matching_engine import calculate_real_priorities, calculate_real_matches
+from core.matching_engine import calculate_real_priorities, calculate_real_matches, normalize_location
 from services.ai_mapper import GeminiAIMapper, QuotaExhaustedError
 
 sitrep_bp = Blueprint("sitrep", __name__)
@@ -25,7 +25,22 @@ def _gather_session_context(session_id: str) -> Dict[str, Any]:
     donors = store.get_session_rows(session_id, limit=200, file_type="donor")
 
     overrides = store.get_location_overrides(session_id)
-    priorities = calculate_real_priorities(beneficiaries, location_overrides=overrides)
+    raw_priorities = calculate_real_priorities(beneficiaries, location_overrides=overrides)
+    
+    # Deduplicate priorities by normalized location name to prevent phantom zones
+    # (e.g., 'Velachery RC' and 'Velachery Relief Center' are the same place)
+    seen_norm = {}
+    for p in raw_priorities:
+        norm_key = normalize_location(p.get("location", ""))
+        if norm_key not in seen_norm:
+            seen_norm[norm_key] = p
+        else:
+            # Keep the one with the higher affected count (more representative)
+            if p.get("affected", 0) > seen_norm[norm_key].get("affected", 0):
+                seen_norm[norm_key] = p
+    priorities = list(seen_norm.values())
+    priorities = sorted(priorities, key=lambda x: x["score"], reverse=True)
+    
     # Priority data (demo fallback)
     if not priorities:
         priorities = [
@@ -75,8 +90,9 @@ def _build_local_sitrep(ctx: Dict[str, Any]) -> str:
     priorities = ctx.get("priorities", [])
     matches = ctx.get("supply_matches", [])
 
-    critical = [p for p in priorities if p["score"] >= 90]
-    high = [p for p in priorities if 75 <= p["score"] < 90]
+    # Use urgency_level field set by calculate_real_priorities (Critical/High/Medium/Low)
+    critical = [p for p in priorities if p.get("urgency_level", "") == "Critical"]
+    high = [p for p in priorities if p.get("urgency_level", "") == "High"]
     total_affected = sum(p.get("affected", 0) for p in priorities)
 
     sections = []
@@ -163,8 +179,11 @@ def generate_sitrep(session_id: str):
                 "Generate a professional, markdown-formatted Situation Report with these exact sections:\n"
                 "## Executive Summary\n## Affected Populations\n## Resource Status & Logistics\n"
                 "## Critical Gaps\n## Recommended Actions\n\n"
-                "Base your report ONLY on the following data. Do not invent locations, numbers, or "
-                "facts not present in the data.\n\n"
+                "CRITICAL RULES:\n"
+                "- Base your report ONLY on the data provided below. Do NOT invent zones, numbers, or facts.\n"
+                "- The 'Priority Zones' list is already deduplicated. Use ONLY the zones listed there.\n"
+                "- Count zones, civilians, and urgency levels from the Priority Zones data ONLY.\n"
+                "- Urgency level is the 'urgency_level' field in each zone (Critical/High/Medium/Low).\n\n"
                 f"Session Data:\n"
                 f"- Total records: {ctx['record_count']}\n"
                 f"- Beneficiary records: {ctx['beneficiary_count']}\n"
@@ -172,7 +191,7 @@ def generate_sitrep(session_id: str):
                 f"- Donor records: {ctx['donor_count']}\n"
                 f"- Data quality: {ctx['total_fixed']} fixed, {ctx['removed_duplicates']} deduped, "
                 f"{ctx['dropped_invalid']} dropped\n\n"
-                f"Priority Zones:\n{_format_list(ctx['priorities'])}\n\n"
+                f"Priority Zones (deduplicated, {len(ctx['priorities'])} total):\n{_format_list(ctx['priorities'])}\n\n"
                 f"Supply Matches:\n{_format_list(ctx['supply_matches'])}\n\n"
                 f"Sample Beneficiaries:\n{_format_list(ctx['sample_beneficiaries'][:5])}\n\n"
                 f"Sample Inventory:\n{_format_list(ctx['sample_inventory'][:5])}\n\n"

@@ -30,7 +30,7 @@ const playSuccessSound = () => {
 };
 
 const Logistics = () => {
-  const { API_BASE_URL, sessionData } = useAppContext();
+  const { API_BASE_URL, sessionData, dataVersion } = useAppContext();
   const [matches, setMatches] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -103,7 +103,7 @@ const Logistics = () => {
     if (sessionId) {
       fetchData();
     }
-  }, [sessionId]);
+  }, [sessionId, dataVersion]);
 
   // Calculations for stats strip
   const totalAllocations = matches.length;

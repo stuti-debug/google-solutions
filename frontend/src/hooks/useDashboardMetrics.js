@@ -11,7 +11,7 @@ const EMPTY_METRICS = {
 };
 
 export const useDashboardMetrics = () => {
-  const { cleanedData, sessionData, API_BASE_URL, navigate, user, loading } = useAppContext();
+  const { cleanedData, sessionData, API_BASE_URL, navigate, user, loading, dataVersion } = useAppContext();
   const [floatingQuery, setFloatingQuery] = useState('');
   const [insights, setInsights] = useState([]);
   const [loadingInsights, setLoadingInsights] = useState(true);
@@ -76,7 +76,7 @@ export const useDashboardMetrics = () => {
     return () => {
       cancelled = true;
     };
-  }, [cleanedData, sessionData, API_BASE_URL, user]);
+  }, [cleanedData, sessionData, API_BASE_URL, user, dataVersion]);
 
   useEffect(() => {
     if (!user) {
@@ -114,7 +114,7 @@ export const useDashboardMetrics = () => {
     return () => {
       cancelled = true;
     };
-  }, [API_BASE_URL, sessionData, user]);
+  }, [API_BASE_URL, sessionData, user, dataVersion]);
 
   const openNlqIfReady = (event) => {
     if (event.key === 'Enter' && floatingQuery.trim()) {

@@ -5,7 +5,7 @@ import ShareButton from './ShareButton';
 import { formatPriorityZone } from '../utils/shareFormatter';
 
 const PriorityScores = () => {
-  const { API_BASE_URL, sessionData, navigate } = useAppContext();
+  const { API_BASE_URL, sessionData, navigate, dataVersion } = useAppContext();
   const [priorities, setPriorities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -35,7 +35,7 @@ const PriorityScores = () => {
     if (sessionId) {
       fetchPriorities();
     }
-  }, [sessionId]);
+  }, [sessionId, dataVersion]);
 
   if (!sessionId) return null;
 

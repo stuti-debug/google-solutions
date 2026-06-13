@@ -135,12 +135,22 @@ def _plan_query_with_context(mapper: GeminiAIMapper, question: str, all_meta: Li
         collection = FILE_TYPE_TO_COLLECTION.get(ft, ft)
         columns = meta.get("columns", [])
         sample = sample_rows_map.get(meta["session_id"], [])
+        
+        # Extract distinct values for key categorical fields to help Gemini avoid schema mismatches
+        distinct_values = {}
+        categorical_fields = ["status", "stock_status", "gender", "need_type", "category", "urgency", "aid_type"]
+        for field in categorical_fields:
+            vals = list({str(row.get(field, "")).strip() for row in sample if row.get(field)})
+            if vals:
+                distinct_values[field] = vals
+        
         desc = {
             "collection": collection,
             "file_type": ft,
             "columns": columns,
             "record_count": meta.get("record_count", 0),
-            "sample_rows": sample[:3],
+            "sample_rows": sample[:5],
+            "distinct_values_in_sample": distinct_values,
         }
         datasets_description.append(desc)
 
@@ -152,7 +162,9 @@ def _plan_query_with_context(mapper: GeminiAIMapper, question: str, all_meta: Li
             "Pick the single most relevant collection for this question",
             "Use ONLY column names that exist in that dataset's columns list",
             "Prefer 'contains' over '==' for text matching to improve robustness",
-            "For filter values, match the casing/format seen in sample_rows",
+            "CRITICAL: For filter values, use ONLY the exact values shown in 'distinct_values_in_sample' — do NOT invent values like 'Out of Stock'. Use the actual values like 'LOW', 'CRITICAL', 'HEALTHY' as shown in the data.",
+            "If looking for supply gaps or shortages, filter on the status/stock_status field using values like 'LOW' or 'CRITICAL' — NOT 'Out' or 'Out of Stock'.",
+            "If looking for urgent beneficiaries, use the 'status' field with value 'Pending' or sort by need_type",
             "Return strict JSON only, no markdown",
         ],
         "output_schema": {
@@ -222,11 +234,11 @@ def query_data():
         if not all_meta:
             return jsonify({"code": "SESSION_NOT_FOUND", "message": "No valid sessions found."}), 404
 
-        # Pre-fetch sample rows for each session so Gemini can see real data
+        # Pre-fetch sample rows for each session — use 10 rows for better distinct value coverage
         sample_rows_map = {}
         for meta in all_meta:
             sid = meta["session_id"]
-            rows = store.get_session_rows(sid, limit=3)
+            rows = store.get_session_rows(sid, limit=10)
             sample_rows_map[sid] = rows
 
         mapper = GeminiAIMapper()

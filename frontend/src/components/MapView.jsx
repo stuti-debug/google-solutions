@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, MarkerClusterer, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../AppContext';
 import { apiFetch } from '../utils/api';
@@ -114,7 +114,7 @@ const MapPinningModal = ({ isOpen, onClose, locationName, initialLat, initialLng
 };
 
 const MapView = () => {
-  const { API_BASE_URL, sessionData, mapFocusPriorityId, setMapFocusPriorityId } = useAppContext();
+  const { API_BASE_URL, sessionData, mapFocusPriorityId, setMapFocusPriorityId, dataVersion } = useAppContext();
   const [priorities, setPriorities] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -208,7 +208,7 @@ const MapView = () => {
     if (sessionId) {
       fetchData();
     }
-  }, [sessionId]);
+  }, [sessionId, dataVersion]);
 
   useEffect(() => {
     if (mapFocusPriorityId && priorities.length > 0) {
@@ -433,27 +433,24 @@ const MapView = () => {
               <GoogleMap
                 mapContainerStyle={containerStyle}
                 center={activeMarker ? { lat: activeMarker.lat, lng: activeMarker.lng } : center}
-                zoom={activeMarker ? 13 : 11}
+                zoom={activeMarker ? 13 : 12}
                 options={{
                   styles: isDarkMode ? darkMapStyle : lightMapStyle,
                   disableDefaultUI: true,
                   zoomControl: true,
                 }}
               >
-                <MarkerClusterer>
-                  {(clusterer) =>
-                    priorities.map((item) => (
-                      <Marker
-                        key={item.id}
-                        position={{ lat: item.lat, lng: item.lng }}
-                        icon={getMarkerIcon(item.score)}
-                        clusterer={clusterer}
-                        onClick={() => setActiveMarker(item)}
-                        animation={activeMarker?.id === item.id ? window.google.maps.Animation.BOUNCE : (hoveredMarkerId === item.id ? window.google.maps.Animation.BOUNCE : null)}
-                      />
-                    ))
-                  }
-                </MarkerClusterer>
+                {/* Crisis zone markers — never clustered, each zone must be individually visible */}
+                {priorities.map((item) => (
+                  <Marker
+                    key={item.id}
+                    position={{ lat: item.lat, lng: item.lng }}
+                    icon={getMarkerIcon(item.score)}
+                    onClick={() => setActiveMarker(item)}
+                    animation={activeMarker?.id === item.id || hoveredMarkerId === item.id ? window.google.maps.Animation.BOUNCE : null}
+                    title={`${item.location} — Priority ${item.score}/100 (${item.urgency_level})`}
+                  />
+                ))}
 
                 {directionsResponse && (
                   <DirectionsRenderer

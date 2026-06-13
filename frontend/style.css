@@ -1840,6 +1840,38 @@ nav {
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   color: var(--clr-text);
   white-space: nowrap;
+  /* Prevent iOS text-selection popup on double-tap */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Mobile: flash highlight when tapping a cell */
+.apple-data-table td:active {
+  background: rgba(13, 115, 119, 0.12) !important;
+}
+
+/* Inline cell edit input (used during table editing) */
+.inline-cell-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1.5px solid var(--clr-primary);
+  border-radius: 6px;
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  outline: none;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+  font-family: inherit;
+  /* Allow text selection inside the input itself */
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  transition: box-shadow 0.15s ease;
+}
+
+.inline-cell-input:focus {
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.2);
 }
 
 .row-number-col {

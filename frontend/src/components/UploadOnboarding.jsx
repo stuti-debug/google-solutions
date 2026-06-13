@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../AppContext';
 import toast from 'react-hot-toast';
 
@@ -7,6 +7,8 @@ const UploadOnboarding = () => {
   const [selectedNGO, setSelectedNGO] = useState('');
   const [checklistStep, setChecklistStep] = useState(0);
   const [checklistSuccess, setChecklistSuccess] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const elapsedTimerRef = useRef(null);
 
   const stepNumber = parseInt(currentScreen.replace('screen-onboard-', ''), 10);
 
@@ -17,13 +19,22 @@ const UploadOnboarding = () => {
         timer = setInterval(() => {
           setChecklistStep((prev) => (prev + 1) % 5);
         }, 900);
-      } else if (checklistSuccess) {
-        setChecklistStep(4); // Set to fully completed visual
-      } else if (checklistSuccess === false) {
+        // Start elapsed timer
+        setElapsedSeconds(0);
+        elapsedTimerRef.current = setInterval(() => {
+          setElapsedSeconds((s) => s + 1);
+        }, 1000);
+      } else {
+        // Stop elapsed timer when done
+        if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+        if (checklistSuccess) setChecklistStep(4);
         if (timer) clearInterval(timer);
       }
     }
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    };
   }, [stepNumber, checklistSuccess]);
 
   const handleFileDrop = (e, category) => {
@@ -197,8 +208,27 @@ const UploadOnboarding = () => {
               {renderCheckItem(0, "Reading your files...")}
               {renderCheckItem(1, "Detecting column types...")}
               {renderCheckItem(2, "Cleaning inconsistencies...")}
-              {renderCheckItem(3, "Generating insights...")}
+              {renderCheckItem(3, "Generating AI insights...")}
             </div>
+
+            {checklistSuccess === null && (
+              <div className="processing-status-hint" style={{
+                marginTop: '1.5rem',
+                padding: '0.75rem 1.25rem',
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '10px',
+                textAlign: 'center',
+                fontSize: '0.85rem',
+                color: 'var(--text-muted, #9aa0b5)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}>
+                <i className="ph ph-robot" style={{ marginRight: '0.4rem' }}></i>
+                AI is analyzing your data — this typically takes <strong>60–90 seconds</strong>. Please don't close this tab.
+                <div style={{ marginTop: '0.4rem', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.03em' }}>
+                  ⏱ {Math.floor(elapsedSeconds / 60) > 0 ? `${Math.floor(elapsedSeconds / 60)}m ` : ''}{elapsedSeconds % 60}s elapsed
+                </div>
+              </div>
+            )}
 
             {checklistSuccess && (
               <div className="actions center-align mt-8" id="finish-onboard-btn">

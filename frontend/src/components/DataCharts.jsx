@@ -34,7 +34,7 @@ export const useChartData = () => {
 };
 
 export const AffectedPopulationChart = () => {
-  const { sessionData, API_BASE_URL } = useAppContext();
+  const { sessionData, API_BASE_URL, dataVersion } = useAppContext();
   const [chartData, setChartData] = React.useState({ bar: [], pie: [] });
   const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
 
@@ -83,7 +83,7 @@ export const AffectedPopulationChart = () => {
         if (barData.length > 0) setChartData(prev => ({ ...prev, bar: barData }));
       });
     return () => { cancelled = true; };
-  }, [sessionId, API_BASE_URL]);
+  }, [sessionId, API_BASE_URL, dataVersion]);
 
   const defaultData = useChartData();
   const displayData = chartData.bar.length > 0 ? chartData.bar : defaultData.bar;
@@ -117,7 +117,7 @@ export const AffectedPopulationChart = () => {
 
 // 2. Inventory Breakdown Chart (Pie Chart) - Default Export
 const InventoryBreakdownChart = () => {
-  const { sessionData, API_BASE_URL } = useAppContext();
+  const { sessionData, API_BASE_URL, dataVersion } = useAppContext();
   const [chartData, setChartData] = React.useState({ pie: [] });
   const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
 
@@ -167,7 +167,7 @@ const InventoryBreakdownChart = () => {
         if (pieData.length > 0) setChartData({ pie: pieData });
       });
     return () => { cancelled = true; };
-  }, [sessionId, API_BASE_URL]);
+  }, [sessionId, API_BASE_URL, dataVersion]);
 
   const defaultData = useChartData();
   const displayData = chartData.pie.length > 0 ? chartData.pie : defaultData.pie;

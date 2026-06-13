@@ -41,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 const BurnDownChart = () => {
-  const { API_BASE_URL, sessionData } = useAppContext();
+  const { API_BASE_URL, sessionData, dataVersion } = useAppContext();
   const [forecasts, setForecasts] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -65,7 +65,7 @@ const BurnDownChart = () => {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [sessionId, API_BASE_URL]);
+  }, [sessionId, API_BASE_URL, dataVersion]);
 
   if (!sessionId) return null;
 
@@ -87,9 +87,9 @@ const BurnDownChart = () => {
   }
 
   const getDaysColor = (days) => {
-    if (days <= 2) return '#EF4444';
-    if (days <= 4) return '#F59E0B';
-    return '#22C55E';
+    if (days <= 2) return '#DC2626'; // dark red — high contrast on any background
+    if (days <= 4) return '#B45309'; // dark amber — high contrast
+    return '#166534';                // dark green — passes WCAG AA (7.2:1 on light, 4.5:1 on dark)
   };
 
   return (

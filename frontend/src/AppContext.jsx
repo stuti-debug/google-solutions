@@ -42,6 +42,9 @@ export const AppProvider = ({ children }) => {
   const [currentScreen, setCurrentScreen] = useState('screen-login');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Incrementing this counter tells every data-fetching component to re-fetch
+  const [dataVersion, setDataVersion] = useState(0);
+  const bumpDataVersion = useCallback(() => setDataVersion((v) => v + 1), []);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -421,6 +424,8 @@ export const AppProvider = ({ children }) => {
       uploadAndCleanFiles,
       runQuery,
       API_BASE_URL,
+      dataVersion,
+      bumpDataVersion,
     }),
     [
       cleanedData,
@@ -433,6 +438,8 @@ export const AppProvider = ({ children }) => {
       signInWithGoogle,
       navigate,
       logout,
+      dataVersion,
+      bumpDataVersion,
     ],
   );
 
