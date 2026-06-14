@@ -77,16 +77,7 @@ def create_app():
     # 8. Basic Health Check
     @app.route('/health')
     def health():
-        return jsonify({
-            "status": "ok",
-            "version": "2.0.0-modular",
-            "env": {
-                "FIREBASE_CREDENTIALS_JSON_present": bool(os.getenv("FIREBASE_CREDENTIALS_JSON")),
-                "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-                "FIREBASE_SERVICE_ACCOUNT_KEY_PATH": os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH"),
-                "GCP_PROJECT_ID": os.getenv("GCP_PROJECT_ID"),
-            }
-        })
+        return jsonify({"status": "ok", "version": "2.0.0-modular"})
 
     return app
 
