@@ -521,7 +521,8 @@ class SessionStore:
 
         with self._connect() as conn:
             rows = conn.execute(query, tuple(params_list)).fetchall()
-        return [
+            
+        result = [
             {
                 **json.loads(r["row_json"]),
                 "_file_type": r["file_type"],
@@ -529,6 +530,16 @@ class SessionStore:
             }
             for r in rows
         ]
+        
+        if not result:
+            try:
+                from routes.data import _get_firestore_session_page
+                fs_data = _get_firestore_session_page(session_id, normalized_type or "all", 1, limit or 500)
+                result = fs_data.get("rows", [])
+            except ImportError:
+                pass
+                
+        return result
 
     def set_insights(self, session_id: str, insights: List[str]) -> None:
         with self._connect() as conn:
