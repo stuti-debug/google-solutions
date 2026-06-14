@@ -21,8 +21,15 @@ def init_firebase() -> firestore.Client:
         try:
             cred_dict = json.loads(raw_json)
             cred = credentials.Certificate(cred_dict)
+            
+            # Write JSON to a temp file so that Vertex AI (which relies on GOOGLE_APPLICATION_CREDENTIALS) can use it
+            cred_path = "./firebase-credentials-tmp.json"
+            with open(cred_path, "w") as f:
+                f.write(raw_json.strip())
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.abspath(cred_path)
+            os.environ["FIREBASE_SERVICE_ACCOUNT_KEY_PATH"] = os.path.abspath(cred_path)
         except Exception as e:
-            raise RuntimeError(f"Failed to parse FIREBASE_CREDENTIALS_JSON: {e}")
+            raise RuntimeError(f"Failed to parse or write FIREBASE_CREDENTIALS_JSON: {e}")
     else:
         # 2. Fallback to file path (Best for Localhost)
         cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH", "").strip()
