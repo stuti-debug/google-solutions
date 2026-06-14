@@ -17,6 +17,13 @@ def _first(row: Dict[str, Any], keys: List[str]):
             return v
     return None
 
+def _get_rows_with_fallback(session_id: str, file_type: str, limit: int = 500) -> List[Dict[str, Any]]:
+    rows = store.get_session_rows(session_id, limit=limit, file_type=file_type)
+    if not rows:
+        from routes.data import _get_firestore_session_page
+        rows = _get_firestore_session_page(session_id, file_type, 1, limit).get("rows", [])
+    return rows
+
 
 def _num(value) -> float:
     if value is None or value == "":
@@ -32,7 +39,7 @@ def _num(value) -> float:
 # ---------------------------------------------------------------------------
 
 def _inventory_status(session_id: str) -> Dict[str, Any]:
-    rows = store.get_session_rows(session_id, limit=500, file_type="inventory")
+    rows = _get_rows_with_fallback(session_id, limit=500, file_type="inventory")
 
     if not rows:
         # Demo data
@@ -97,7 +104,7 @@ def _inventory_status(session_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _beneficiary_coverage(session_id: str) -> Dict[str, Any]:
-    rows = store.get_session_rows(session_id, limit=500, file_type="beneficiary")
+    rows = _get_rows_with_fallback(session_id, limit=500, file_type="beneficiary")
 
     if not rows:
         return {
@@ -150,7 +157,7 @@ def _beneficiary_coverage(session_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _donor_ledger(session_id: str) -> Dict[str, Any]:
-    rows = store.get_session_rows(session_id, limit=500, file_type="donor")
+    rows = _get_rows_with_fallback(session_id, limit=500, file_type="donor")
 
     if not rows:
         return {
@@ -243,8 +250,8 @@ def _data_quality(session_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _gap_analysis(session_id: str) -> Dict[str, Any]:
-    beneficiaries = store.get_session_rows(session_id, limit=500, file_type="beneficiary")
-    inventory = store.get_session_rows(session_id, limit=500, file_type="inventory")
+    beneficiaries = _get_rows_with_fallback(session_id, limit=500, file_type="beneficiary")
+    inventory = _get_rows_with_fallback(session_id, limit=500, file_type="inventory")
 
     # Aggregate demand by district
     demand: Dict[str, int] = Counter()

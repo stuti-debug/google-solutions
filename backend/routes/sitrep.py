@@ -20,9 +20,16 @@ def _gather_session_context(session_id: str) -> Dict[str, Any]:
     meta = store.get_session_meta(session_id) or {}
     summary = meta.get("summary", {})
 
-    beneficiaries = store.get_session_rows(session_id, limit=200, file_type="beneficiary")
-    inventory = store.get_session_rows(session_id, limit=200, file_type="inventory")
-    donors = store.get_session_rows(session_id, limit=200, file_type="donor")
+    def _get_rows_with_fallback(session_id: str, file_type: str, limit: int = 500) -> List[Dict[str, Any]]:
+        rows = store.get_session_rows(session_id, limit=limit, file_type=file_type)
+        if not rows:
+            from routes.data import _get_firestore_session_page
+            rows = _get_firestore_session_page(session_id, file_type, 1, limit).get("rows", [])
+        return rows
+
+    beneficiaries = _get_rows_with_fallback(session_id, limit=200, file_type="beneficiary")
+    inventory = _get_rows_with_fallback(session_id, limit=200, file_type="inventory")
+    donors = _get_rows_with_fallback(session_id, limit=200, file_type="donor")
 
     overrides = store.get_location_overrides(session_id)
     raw_priorities = calculate_real_priorities(beneficiaries, location_overrides=overrides)
