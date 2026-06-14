@@ -19,6 +19,22 @@ from routes.alerts import alerts_bp
 from routes.forecast import forecast_bp
 from routes.reports import reports_bp
 
+def _rate_limit_storage_uri():
+    configured_uri = os.getenv("RATELIMIT_STORAGE_URI") or os.getenv("REDIS_URL")
+    if configured_uri:
+        return configured_uri
+
+    app_env = (
+        os.getenv("FLASK_ENV")
+        or os.getenv("CRISISGRID_ENV")
+        or os.getenv("APP_ENV")
+        or "development"
+    ).lower()
+    if app_env in {"prod", "production"}:
+        return "redis://localhost:6379/0"
+
+    return "memory://"
+
 def create_app():
     # 1. Load environment variables
     load_dotenv(override=True)
@@ -28,10 +44,7 @@ def create_app():
     
     # 3. Configure app
     app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
-    app.config["RATELIMIT_STORAGE_URI"] = os.getenv(
-        "RATELIMIT_STORAGE_URI",
-        os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-    )
+    app.config["RATELIMIT_STORAGE_URI"] = _rate_limit_storage_uri()
     app.config["RATELIMIT_HEADERS_ENABLED"] = True
     
     # 4. Setup CORS

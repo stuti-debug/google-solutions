@@ -1,16 +1,16 @@
-item_name,category,quantity,unit,warehouse,is_crisis_zone
-Drinking Water (20L Cans),Water,5000,Litres,Charbagh Central Depot,FALSE
-ORS Sachets,Water,8000,Sachets,Aminabad Logistics Hub,FALSE
-Water Purification Tablets,Water,12000,Tablets,Indira Nagar Red Cross Supply,FALSE
-First Aid Kits,Medical,400,Kits,Charbagh Central Depot,FALSE
-Oral Rehydration Solution,Medical,2500,Sachets,Aminabad Logistics Hub,FALSE
-Paracetamol 500mg,Medical,15000,Tablets,Indira Nagar Red Cross Supply,FALSE
-Flood Relief Food Packets,Food,3000,Packets,Charbagh Central Depot,FALSE
-Compressed Rice Biscuits,Food,5000,Packs,Aminabad Logistics Hub,FALSE
-Ready-to-Eat Rations,Food,2200,Packets,Indira Nagar Red Cross Supply,FALSE
-Emergency Relief Tarpaulins,Shelter,800,Pieces,Charbagh Central Depot,FALSE
-Family Tent Kits,Shelter,350,Kits,Aminabad Logistics Hub,FALSE
-Thermal Blankets,Shelter,1200,Pieces,Indira Nagar Red Cross Supply,FALSE
-Hygiene Kits (Soap & Sanitizer),Hygiene,900,Kits,Charbagh Central Depot,FALSE
-Sanitary Napkins,Hygiene,4000,Packs,Aminabad Logistics Hub,FALSE
-Surplus Food from Camp Kitchen,Food,200,Packets,Gomti Nagar Shelter,TRUE
+item_name,category,quantity,unit,district,warehouse,is_crisis_zone
+Drinking Water (20L Cans),Water,5000,Litres,Lucknow,Charbagh Central Depot,FALSE
+ORS Sachets,Water,8000,Sachets,Lucknow,Aminabad Logistics Hub,FALSE
+Water Purification Tablets,Water,12000,Tablets,Lucknow,Indira Nagar Red Cross Supply,FALSE
+First Aid Kits,Medical,400,Kits,Lucknow,Charbagh Central Depot,FALSE
+Oral Rehydration Solution,Medical,2500,Sachets,Lucknow,Aminabad Logistics Hub,FALSE
+Paracetamol 500mg,Medical,15000,Tablets,Lucknow,Indira Nagar Red Cross Supply,FALSE
+Flood Relief Food Packets,Food,3000,Packets,Lucknow,Charbagh Central Depot,FALSE
+Compressed Rice Biscuits,Food,5000,Packs,Lucknow,Aminabad Logistics Hub,FALSE
+Ready-to-Eat Rations,Food,2200,Packets,Lucknow,Indira Nagar Red Cross Supply,FALSE
+Emergency Relief Tarpaulins,Shelter,800,Pieces,Lucknow,Charbagh Central Depot,FALSE
+Family Tent Kits,Shelter,350,Kits,Lucknow,Aminabad Logistics Hub,FALSE
+Thermal Blankets,Shelter,1200,Pieces,Lucknow,Indira Nagar Red Cross Supply,FALSE
+Hygiene Kits (Soap & Sanitizer),Hygiene,900,Kits,Lucknow,Charbagh Central Depot,FALSE
+Sanitary Napkins,Hygiene,4000,Packs,Lucknow,Aminabad Logistics Hub,FALSE
+Surplus Food from Camp Kitchen,Food,200,Packets,Lucknow,Gomti Nagar Shelter,TRUE

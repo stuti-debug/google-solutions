@@ -29,6 +29,18 @@ const protectedScreens = new Set([
 ]);
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const BACKEND_OFFLINE_MESSAGE = 'Backend server is offline. Start Flask on port 8000 and try again.';
+const REQUEST_TIMEOUTS = {
+  health: 4000,
+  upload: 30000,
+  status: 10000,
+};
+
+const categoryLabels = {
+  beneficiary: 'beneficiary',
+  inventory: 'inventory',
+  donor: 'donor',
+};
 
 export const AppProvider = ({ children }) => {
   const [cleanedData, setCleanedData] = useState(null);
@@ -59,6 +71,65 @@ export const AppProvider = ({ children }) => {
     if (payload.error) return payload.error;
     return fallbackMessage;
   };
+
+  const readResponsePayload = async (response) => {
+    const text = await response.text().catch(() => '');
+    if (!text) return {};
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  };
+
+  const apiFetchWithTimeout = async (url, options = {}, timeoutMs = 10000, timeoutMessage = 'Request timed out. Please try again.') => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await apiFetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(timeoutMessage);
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  };
+
+  const toNetworkMessage = (error, fallbackMessage) => {
+    if (error?.message) return error.message;
+    return fallbackMessage;
+  };
+
+  const checkBackendHealth = useCallback(async ({ silent = false } = {}) => {
+    try {
+      const response = await apiFetchWithTimeout(
+        `${API_BASE_URL}/health`,
+        { method: 'GET' },
+        REQUEST_TIMEOUTS.health,
+        BACKEND_OFFLINE_MESSAGE,
+      );
+      const payload = await readResponsePayload(response);
+
+      if (!response.ok || (payload?.status && payload.status !== 'ok')) {
+        throw new Error(BACKEND_OFFLINE_MESSAGE);
+      }
+
+      return { ok: true };
+    } catch {
+      const message = BACKEND_OFFLINE_MESSAGE;
+      if (!silent) {
+        toast.error(message);
+      }
+      return { ok: false, message };
+    }
+  }, [API_BASE_URL]);
 
   const mergeCleanResults = (results) => {
     const normalize = (result) => ({
@@ -141,13 +212,18 @@ export const AppProvider = ({ children }) => {
       attempts += 1;
 
       try {
-        const res = await apiFetch(`${API_BASE_URL}/status/${jobId}`);
+        const res = await apiFetchWithTimeout(
+          `${API_BASE_URL}/status/${jobId}`,
+          { method: 'GET' },
+          REQUEST_TIMEOUTS.status,
+          'Status check timed out. The backend may be busy. Retrying...',
+        );
         if (!res.ok) {
-          const payload = await res.json().catch(() => ({}));
+          const payload = await readResponsePayload(res);
           throw new Error(extractErrorMessage(payload, 'Polling failed'));
         }
 
-        const data = await res.json();
+        const data = await readResponsePayload(res);
 
         if (data.status === 'completed') {
           return data;
@@ -179,7 +255,7 @@ export const AppProvider = ({ children }) => {
     });
   };
 
-  const uploadAndCleanFiles = async (setChecklistStep, setChecklistSuccess) => {
+  const uploadAndCleanFiles = async (setChecklistStep, setChecklistSuccess, setUploadError) => {
     const selectedFiles = [
       { file: uploadedFiles.beneficiaries, category: 'beneficiary' },
       { file: uploadedFiles.inventory, category: 'inventory' },
@@ -193,6 +269,7 @@ export const AppProvider = ({ children }) => {
 
     setChecklistStep?.(0);
     setChecklistSuccess(null);
+    setUploadError?.('');
 
     const batchSessionId = generateUUID();
 
@@ -200,23 +277,38 @@ export const AppProvider = ({ children }) => {
       const uploadTasks = selectedFiles.map((fObj) => {
         return async () => {
           const category = fObj.category;
+          const categoryLabel = categoryLabels[category] || category;
           const file = fObj.file;
           const formData = new FormData();
           formData.append('file', file, file.name || `${category}.csv`);
           formData.append('session_id', batchSessionId);
 
-          const response = await apiFetch(`${API_BASE_URL}/clean`, {
-            method: 'POST',
-            body: formData,
-          });
+          try {
+            const response = await apiFetchWithTimeout(
+              `${API_BASE_URL}/clean`,
+              {
+                method: 'POST',
+                body: formData,
+              },
+              REQUEST_TIMEOUTS.upload,
+              `Upload request timed out for ${categoryLabel}. Please try again.`,
+            );
 
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            throw new Error(extractErrorMessage(payload, `Upload failed for ${category}`));
+            const payload = await readResponsePayload(response);
+            if (!response.ok) {
+              throw new Error(extractErrorMessage(payload, `Upload failed for ${categoryLabel}`));
+            }
+
+            const jobResult = await pollJobStatus(payload.job_id);
+            return { ...jobResult, category };
+          } catch (error) {
+            const uploadError = new Error(
+              `${categoryLabel} upload failed: ${toNetworkMessage(error, `Upload failed for ${categoryLabel}`)}`,
+            );
+            uploadError.category = category;
+            uploadError.fileName = file?.name || `${category}.csv`;
+            throw uploadError;
           }
-
-          const jobResult = await pollJobStatus(payload.job_id);
-          return { ...jobResult, category };
         };
       });
 
@@ -280,8 +372,15 @@ export const AppProvider = ({ children }) => {
       setChecklistStep?.(4);
       setChecklistSuccess(true);
     } catch (error) {
+      console.error('Upload pipeline failed:', {
+        category: error.category,
+        fileName: error.fileName,
+        message: error.message,
+      });
+      const message = error.message || 'Upload failed. Please try again.';
       setChecklistSuccess(false);
-      toast.error(error.message || 'Upload failed. Please try again.');
+      setUploadError?.(message);
+      toast.error(message);
     }
   };
 
@@ -384,44 +483,29 @@ export const AppProvider = ({ children }) => {
     if (!sessionId || !user) return;
 
     const sessionDocRef = doc(db, 'sessions', sessionId);
-    const unsubscribe = onSnapshot(
-      sessionDocRef,
-      async (snapshot) => {
-        if (snapshot.exists()) {
-          // Fetch fresh rows from the database cache using apiFetch
-          try {
-            const typeEntries = await Promise.all(
-              ['beneficiary', 'inventory', 'donor'].map(async (fileType) => {
-                const res = await apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${fileType}`);
-                if (!res.ok) return [fileType, []];
-                const payload = await res.json();
-                return [fileType, payload.rows || []];
-              }),
-            );
-            setCleanedDataMap(Object.fromEntries(typeEntries));
-          } catch (err) {
-            console.error("Error updating real-time session sync:", err);
-          }
-        }
-      },
-      (firestoreError) => {
-        // Gracefully handle Firestore permission errors — real-time sync is
-        // an optional enhancement; the core app works without it.
-        if (firestoreError?.code === 'permission-denied') {
-          console.warn(
-            '[CrisisGrid] Firestore snapshot: permission-denied. ' +
-            'Real-time multi-user sync is disabled. ' +
-            'Update Firestore Security Rules to enable it.',
+    const unsubscribe = onSnapshot(sessionDocRef, async (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        
+        // Fetch fresh rows from the database cache using apiFetch
+        try {
+          const typeEntries = await Promise.all(
+            ['beneficiary', 'inventory', 'donor'].map(async (fileType) => {
+              const res = await apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${fileType}`);
+              if (!res.ok) return [fileType, []];
+              const payload = await res.json();
+              return [fileType, payload.rows || []];
+            }),
           );
-        } else {
-          console.warn('[CrisisGrid] Firestore snapshot error (non-fatal):', firestoreError?.message);
+          setCleanedDataMap(Object.fromEntries(typeEntries));
+        } catch (err) {
+          console.error("Error updating real-time session sync:", err);
         }
-      },
-    );
+      }
+    });
 
     return () => unsubscribe();
   }, [sessionData, user, API_BASE_URL]);
-
 
   const value = useMemo(
     () => ({
@@ -431,14 +515,13 @@ export const AppProvider = ({ children }) => {
       sessionData,
       uploadedFiles,
       setUploadedFiles,
-      setCleanedDataMap,
-      setSessionData,
       user,
       loading,
       signInWithGoogle,
       navigate,
       logout,
       uploadAndCleanFiles,
+      checkBackendHealth,
       runQuery,
       API_BASE_URL,
       dataVersion,
@@ -455,6 +538,7 @@ export const AppProvider = ({ children }) => {
       signInWithGoogle,
       navigate,
       logout,
+      checkBackendHealth,
       dataVersion,
       bumpDataVersion,
     ],

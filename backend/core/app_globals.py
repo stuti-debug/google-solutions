@@ -9,7 +9,6 @@ from cleaning_pipeline import CrisisGridCleaningPipeline
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[],
-    storage_uri="memory://",
 )
 
 store = SessionStore()

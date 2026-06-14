@@ -1,26 +1,26 @@
-head_of_household,household_size,phone,village,need_type,status
-Ramesh Kumar Verma,6,9415012301,Hazratganj Relief Camp,Water,Pending
-Sunita Devi,4,9415023412,Hazratganj Relief Camp,Food,Dispatched
-Mohd. Irfan Ansari,5,9452034523,Hazratganj Relief Camp,Medical,Pending
-Kavita Singh Rawat,3,9415045634,Gomti Ngr Shlter,Shelter,Pending
-Dinesh Prasad Mishra,7,9452056745,Gomti Nagar Shelter,Water,Dispatched
-Anjali Sharma,4,9415067856,Alambagh Transit Center,Food,Pending
-Priya Yadav,2,9452078967,Chowk Temporary Shelter,Medical,Dispatched
-Rakesh Tiwari,8,9415089078,Hazratganj Relief Camp,Food,Pending
-Nirmala Pandey,5,9452090189,Alambagh Transit Center,Water,Pending
-Suresh Lal Gupta,3,9415001290,Chowk Tmp Shelter,Shelter,Dispatched
-Fatima Khatoon,6,9452012301,Hazratganj Relif Cmp,Food,Pending
-Vijay Bahadur Shukla,4,9415023413,Gomti Ngr Shelter,Medical,Pending
-Geeta Rawat,5,9452034524,Hazrat Gunj Relief Camp,Water,Dispatched
-Anwar Khan,7,9415045635,Alambag Bridge,Shelter,Pending
-Pushpa Rani Dixit,3,9452056746,Chowk Temp Shltr,Food,Pending
-Mahesh Chandra,4,9415067857,Hazratganj Relief Camp,Medical,Dispatched
-Ranjana Tripathi,6,9452078968,Gomti Nagar Shelter,Water,Pending
-Ashok Kumar Patel,5,9415089079,Alambagh Transit Center,Food,Dispatched
-Saira Begum,3,9452090180,Chowk Temporary Shelter,Medical,Pending
-Shiv Shankar Bajpai,8,9415001291,Hazratgnj Relif Centr,Shelter,Pending
-Lalita Devi Srivastava,4,9452012302,Gomti Nagar Shelter,Food,Dispatched
-Deepak Verma,6,9415023414,Gomti Ngr Shilter,Water,Pending
-Meena Kumari,5,9452034525,Alambagh Transit Center,Medical,Dispatched
-Roop Narain Mishra,3,9415045636,Chowk Temporary Shelter,Shelter,Pending
-Amita Singh,7,9452056747,Hazratganj Relief Camp,Food,Pending
+name,household_size,phone,district,village,need_type,status,date_registered
+Ramesh Kumar Verma,6,9415012301,Lucknow,Hazratganj Relief Camp,Water,Pending,2025-07-16
+Sunita Devi,4,9415023412,lko,Hazratganj Relief Camp,Food,Dispatched,2025-07-16
+Mohd. Irfan Ansari,5,9452034523,LKO,Hazratganj Relief Camp,Medical,Pending,2025-07-16
+Kavita Singh Rawat,3,9415045634,Kanpur,Gomti Ngr Shlter,Shelter,Pending,2025-07-16
+Dinesh Prasad Mishra,7,9452056745,kanpur,Gomti Nagar Shelter,Water,Dispatched,2025-07-15
+Anjali Sharma,4,9415067856,Lucknow,Alambagh Transit Center,Food,Pending,2025-07-15
+Priya Yadav,2,9452078967,Lucknow,Chowk Temporary Shelter,Medical,Dispatched,2025-07-15
+Rakesh Tiwari,8,9415089078,Lucknow,Hazratganj Relief Camp,Food,Pending,2025-07-14
+Nirmala Pandey,5,9452090189,Lucknow,Alambagh Transit Center,Water,Pending,2025-07-14
+Suresh Lal Gupta,3,9415001290,Lucknow,Chowk Tmp Shelter,Shelter,Dispatched,2025-07-14
+Fatima Khatoon,6,9452012301,Lucknow,Hazratganj Relif Cmp,Food,Pending,2025-07-13
+Vijay Bahadur Shukla,4,9415023413,Kanpur,Gomti Ngr Shelter,Medical,Pending,2025-07-13
+Geeta Rawat,5,9452034524,Lucknow,Hazrat Gunj Relief Camp,Water,Dispatched,2025-07-13
+Anwar Khan,7,9415045635,Lucknow,Alambag Bridge,Shelter,Pending,2025-07-12
+Pushpa Rani Dixit,3,9452056746,Lucknow,Chowk Temp Shltr,Food,Pending,2025-07-12
+Mahesh Chandra,4,9415067857,Lucknow,Hazratganj Relief Camp,Medical,Dispatched,2025-07-12
+Ranjana Tripathi,6,9452078968,Lucknow,Gomti Nagar Shelter,Water,Pending,2025-07-12
+Ashok Kumar Patel,5,9415089079,Lucknow,Alambagh Transit Center,Food,Dispatched,2025-07-11
+Saira Begum,3,9452090180,Lucknow,Chowk Temporary Shelter,Medical,Pending,2025-07-11
+Shiv Shankar Bajpai,8,9415001291,Lucknow,Hazratgnj Relif Centr,Shelter,Pending,2025-07-11
+Lalita Devi Srivastava,4,9452012302,Lucknow,Gomti Nagar Shelter,Food,Dispatched,2025-07-10
+Deepak Verma,6,9415023414,Lucknow,Gomti Ngr Shilter,Water,Pending,2025-07-10
+Meena Kumari,5,9452034525,Lucknow,Alambagh Transit Center,Medical,Dispatched,2025-07-10
+Roop Narain Mishra,3,9415045636,Lucknow,Chowk Temporary Shelter,Shelter,Pending,2025-07-10
+Amita Singh,7,9452056747,Lucknow,Hazratganj Relief Camp,Food,Pending,2025-07-10

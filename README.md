@@ -91,7 +91,7 @@ When CSV files are uploaded, the **`GeminiAIMapper`** service:
 3. **Canonicalizes** district name typos via a dedicated `canonicalize_districts` call with fuzzy normalization
 4. **Infers** missing values and standardizes units, currencies, and date formats
 
-**Model:** `gemini-2.5-flash` via Vertex AI SDK | **Retry logic:** 2 JSON-strict retries with schema enforcement
+**Model:** `gemini-3.5-flash` via Vertex AI SDK | **Retry logic:** 2 JSON-strict retries with schema enforcement
 
 ---
 

@@ -54,9 +54,7 @@ CANONICAL_SCHEMAS: Dict[str, List[str]] = {
 }
 
 REQUIRED_FIELDS: Dict[str, List[str]] = {
-    # 'district' is intentionally NOT required for beneficiaries —
-    # many real field CSVs omit it; removing it prevents mass row-drops.
-    "beneficiary": ["name", "village"],
+    "beneficiary": ["name", "district", "village"],
     "inventory": ["item_name", "quantity"],
     "donor": ["donor_name"],
 }
@@ -74,8 +72,7 @@ NUMERIC_FIELDS: Dict[str, List[str]] = {
 }
 
 DEDUPE_KEYS: Dict[str, List[str]] = {
-    # district excluded from beneficiary dedupe — it's often null/absent
-    "beneficiary": ["name", "phone", "village"],
+    "beneficiary": ["name", "phone", "district", "village"],
     "inventory": ["item_name", "district", "warehouse", "expiry_date"],
     "donor": ["donor_name", "phone", "email", "date_donated", "amount"],
 }
@@ -84,10 +81,6 @@ COLUMN_ALIASES: Dict[str, Dict[str, str]] = {
     "beneficiary": {
         "beneficiaryname": "name",
         "nameofthebeneficiary": "name",
-        "head_of_household": "name",
-        "headofhousehold": "name",
-        "head_of_hh": "name",
-        "headofhh": "name",
         "hhsize": "household_size",
         "familysize": "household_size",
         "regdate": "date_registered",
@@ -121,44 +114,6 @@ DISTRICT_LOCAL_MAP = {
     "allahabad": "Prayagraj",
     "pryagraj": "Prayagraj",
     "prayagraj": "Prayagraj",
-}
-
-# Canonical map for camp/village name typos (Lucknow flood scenario).
-# Key = stripped lowercase letters-only form; Value = canonical display name.
-VILLAGE_ALIAS_MAP: Dict[str, str] = {
-    # Hazratganj Relief Camp variants
-    "hazratganjreliefcamp": "Hazratganj Relief Camp",
-    "hazratganjrelefcamp": "Hazratganj Relief Camp",
-    "hazratganjrelifcamp": "Hazratganj Relief Camp",
-    "hazratganjrelifcmp": "Hazratganj Relief Camp",
-    "hazratganjreliefcenter": "Hazratganj Relief Camp",
-    "hazratganjreliefcentr": "Hazratganj Relief Camp",
-    "hazratgnjreliefcamp": "Hazratganj Relief Camp",
-    "hazratgnjrelefcamp": "Hazratganj Relief Camp",
-    "hazratgnjrelifcmp": "Hazratganj Relief Camp",
-    "hazratgnjrelifcentr": "Hazratganj Relief Camp",
-    "hazratgnjrelicenter": "Hazratganj Relief Camp",
-    "hazratgunj": "Hazratganj Relief Camp",
-    "hazratgunjreliefcamp": "Hazratganj Relief Camp",
-    # Gomti Nagar Shelter variants
-    "gomtingarshelter": "Gomti Nagar Shelter",
-    "gomtingrshelter": "Gomti Nagar Shelter",
-    "gomtinagarshelter": "Gomti Nagar Shelter",
-    "gomtingrshilter": "Gomti Nagar Shelter",
-    "gomtinagershilter": "Gomti Nagar Shelter",
-    "gomtingrshlter": "Gomti Nagar Shelter",
-    "gomtinagarshlter": "Gomti Nagar Shelter",
-    # Alambagh Transit Center variants
-    "alambaghtransit": "Alambagh Transit Center",
-    "alambaghbridge": "Alambagh Transit Center",
-    "alambaghtransitcenter": "Alambagh Transit Center",
-    "alambagbridge": "Alambagh Transit Center",
-    "alambagtransit": "Alambagh Transit Center",
-    # Chowk Temporary Shelter variants
-    "chowktemporaryshelter": "Chowk Temporary Shelter",
-    "chowktmpshelter": "Chowk Temporary Shelter",
-    "chowktempshltr": "Chowk Temporary Shelter",
-    "chowktempshelter": "Chowk Temporary Shelter",
 }
 
 NULL_TOKENS = {"", " ", "-", "na", "n/a", "null", "none", "nil", "nan"}
@@ -269,7 +224,6 @@ class DataCleaner:
         cleaned_df = self._apply_column_mapping(cleaned_df, file_type, {})
         self._emit_progress(progress_callback, 85, "Applied AI cleanup results")
 
-        cleaned_df, village_fixes = self._normalize_villages(cleaned_df)
         cleaned_df, district_fixes = self._normalize_districts(cleaned_df)
         cleaned_df, date_fixes = self._normalize_dates(cleaned_df, file_type)
         cleaned_df = self._normalize_numeric(cleaned_df, file_type)
@@ -277,7 +231,7 @@ class DataCleaner:
         cleaned_df, dropped_invalid_rows, error_logs = self._drop_invalid_rows(cleaned_df, file_type)
         cleaned_df, removed_duplicates = self._remove_duplicates(cleaned_df, file_type)
 
-        summary.total_fixed += village_fixes + district_fixes + date_fixes
+        summary.total_fixed += district_fixes + date_fixes
         summary.removed_duplicates += removed_duplicates
         summary.dropped_invalid_rows += dropped_invalid_rows
         summary.error_logs.extend(error_logs)
@@ -602,27 +556,6 @@ class DataCleaner:
             if col not in df.columns:
                 df[col] = pd.NA
         return df[wanted].copy()
-
-    def _normalize_villages(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
-        """Normalize known camp/location name typos in the village column."""
-        if "village" not in df.columns:
-            return df, 0
-        fixed = 0
-
-        def local_map(value):
-            nonlocal fixed
-            if pd.isna(value):
-                return pd.NA
-            raw = str(value).strip()
-            key = re.sub(r"[^a-z]", "", raw.lower())
-            canonical = VILLAGE_ALIAS_MAP.get(key)
-            if canonical and canonical != raw:
-                fixed += 1
-                return canonical
-            return raw
-
-        df["village"] = df["village"].map(local_map)
-        return df, fixed
 
     def _normalize_districts(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
         if "district" not in df.columns:
