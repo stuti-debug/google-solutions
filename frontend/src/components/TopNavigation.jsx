@@ -30,7 +30,7 @@ const TopNavigation = () => {
 
   useEffect(() => {
     const sessionId = sessionData || localStorage.getItem('crisisgrid_session');
-    if (!sessionId || API_BASE_URL == null) return;
+    if (!sessionId || API_BASE_URL == null || !user) return;
     let cancelled = false;
     apiFetch(`${API_BASE_URL}/alerts/${sessionId}`)
       .then(res => res.json())
@@ -45,7 +45,7 @@ const TopNavigation = () => {
         if (!cancelled) setAlertsLoaded(true);
       });
     return () => { cancelled = true; };
-  }, [sessionData, API_BASE_URL]);
+  }, [sessionData, API_BASE_URL, user]);
 
   const navLinks = [
     { screen: 'screen-dashboard', label: 'Dashboard', icon: 'ph-squares-four' },

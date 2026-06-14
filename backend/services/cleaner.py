@@ -352,8 +352,10 @@ class DataCleaner:
                     "chunk_row_count": len(chunk_rows),
                 },
                 "instructions": [
-                    "Perform entity resolution and standardization across this chunk.",
-                    "Treat short forms as same entities when context is clear (e.g., lko = Lucknow).",
+                    "Perform strict entity resolution and standardization across this chunk.",
+                    "Fix spelling mistakes and standardize location names (e.g., village, warehouse, district) to their correct or most common canonical form based on the global context candidates.",
+                    "For example, resolve variants like 'Gomti Ngr Shilter' or 'Gomti Ngr Shelter' to a single unified name 'Gomti Nagar Shelter'.",
+                    "Merge and deduplicate records that refer to the exact same entity/person/event based on the canonical schema.",
                     "Fill missing values ONLY when high-confidence from row + dataset context; otherwise keep null.",
                     "Output each row with EXACTLY the canonical schema keys.",
                     "Return strict JSON only.",
@@ -416,6 +418,16 @@ class DataCleaner:
             district_values = df["district"].dropna().astype(str).str.strip()
             district_values = district_values[district_values != ""]
             context["district_candidates"] = district_values.value_counts().head(25).index.tolist()
+
+        if "village" in df.columns:
+            village_values = df["village"].dropna().astype(str).str.strip()
+            village_values = village_values[village_values != ""]
+            context["village_candidates"] = village_values.value_counts().head(50).index.tolist()
+
+        if "warehouse" in df.columns:
+            warehouse_values = df["warehouse"].dropna().astype(str).str.strip()
+            warehouse_values = warehouse_values[warehouse_values != ""]
+            context["warehouse_candidates"] = warehouse_values.value_counts().head(50).index.tolist()
 
         context["column_examples"] = {}
         for col in df.columns:

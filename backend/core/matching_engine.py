@@ -32,9 +32,9 @@ except ImportError:  # pragma: no cover
     _ORTOOLS_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
-# Static coordinate table for Chennai (fallback when Geocoding API absent)
+# Static coordinate table (fallback when Geocoding API absent)
 # ---------------------------------------------------------------------------
-CHENNAI_COORDS: Dict[str, Tuple[float, float]] = {
+STATIC_COORDS: Dict[str, Tuple[float, float]] = {
     "chetpet camp": (13.0714, 80.2376),
     "chetpet": (13.0714, 80.2376),
     "saidapet bridge": (13.0154, 80.2220),
@@ -46,6 +46,14 @@ CHENNAI_COORDS: Dict[str, Tuple[float, float]] = {
     "guindy": (13.0067, 80.2206),
     "tambaram shelter": (12.9249, 80.1000),
     "tambaram": (12.9249, 80.1000),
+    "hazratganj relief camp": (26.8504, 80.9399),
+    "hazratganj": (26.8504, 80.9399),
+    "alambagh transit center": (26.8045, 80.8988),
+    "alambagh": (26.8045, 80.8988),
+    "gomti nagar shelter": (26.8569, 80.9996),
+    "gomti nagar": (26.8569, 80.9996),
+    "chowk temporary shelter": (26.8687, 80.9069),
+    "chowk": (26.8687, 80.9069),
 }
 
 # Keywords that indicate a location is a crisis zone, NOT a proper supply depot
@@ -122,8 +130,8 @@ def _resolve_coords(
     norm_overrides = {normalize_location(k): v for k, v in location_overrides.items()}
     if norm_name in norm_overrides:
         return norm_overrides[norm_name]
-    norm_chennai = {normalize_location(k): v for k, v in CHENNAI_COORDS.items()}
-    return norm_chennai.get(norm_name, (13.0827, 80.2707))  # fallback = Chennai centre
+    norm_static = {normalize_location(k): v for k, v in STATIC_COORDS.items()}
+    return norm_static.get(norm_name, (13.0827, 80.2707))  # fallback = Chennai centre
 
 # ---------------------------------------------------------------------------
 # Priority scoring (unchanged from original – no LP required here)
