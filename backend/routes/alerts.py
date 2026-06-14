@@ -31,13 +31,30 @@ def _generate_alerts(session_id: str) -> List[Dict[str, Any]]:
     alerts: List[Dict[str, Any]] = []
     alert_id = 0
 
-    # --- Priority-based alerts (demo data) ---
-    priorities = [
-        {"location": "Chetpet Camp", "score": 91, "urgency_level": "Critical", "affected": 1200},
-        {"location": "Velachery Sector 4", "score": 85, "urgency_level": "High", "affected": 850},
-        {"location": "Tambaram Shelter", "score": 62, "urgency_level": "Medium", "affected": 400},
-        {"location": "Guindy Relief Center", "score": 45, "urgency_level": "Low", "affected": 250},
-    ]
+    from core.matching_engine import calculate_real_priorities, normalize_location
+    beneficiaries = store.get_session_rows(session_id, limit=500, file_type="beneficiary")
+    overrides = store.get_location_overrides(session_id)
+    raw_priorities = calculate_real_priorities(beneficiaries, location_overrides=overrides)
+    
+    seen_norm = {}
+    for p in raw_priorities:
+        norm_key = normalize_location(p.get("location", ""))
+        if norm_key not in seen_norm:
+            seen_norm[norm_key] = p
+        else:
+            if p.get("affected", 0) > seen_norm[norm_key].get("affected", 0):
+                seen_norm[norm_key] = p
+    priorities = list(seen_norm.values())
+    priorities = sorted(priorities, key=lambda x: x["score"], reverse=True)
+
+    if not priorities:
+        # --- Priority-based alerts (demo data) ---
+        priorities = [
+            {"location": "Chetpet Camp", "score": 91, "urgency_level": "Critical", "affected": 1200},
+            {"location": "Velachery Sector 4", "score": 85, "urgency_level": "High", "affected": 850},
+            {"location": "Tambaram Shelter", "score": 62, "urgency_level": "Medium", "affected": 400},
+            {"location": "Guindy Relief Center", "score": 45, "urgency_level": "Low", "affected": 250},
+        ]
 
     for p in priorities:
         if p["score"] >= 90:
