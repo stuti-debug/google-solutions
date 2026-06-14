@@ -16,7 +16,16 @@ def get_supply_match(session_id):
         
         # Fetch rows from SQLite/Firestore
         beneficiaries = store.get_session_rows(session_id, file_type="beneficiary")
+        if not beneficiaries:
+            from routes.data import _get_firestore_session_page
+            fs_data = _get_firestore_session_page(session_id, "beneficiary", 1, 1000)
+            beneficiaries = fs_data.get("rows", [])
+            
         inventory = store.get_session_rows(session_id, file_type="inventory")
+        if not inventory:
+            from routes.data import _get_firestore_session_page
+            fs_data = _get_firestore_session_page(session_id, "inventory", 1, 1000)
+            inventory = fs_data.get("rows", [])
         
         overrides = store.get_location_overrides(session_id)
         matches = calculate_real_matches(beneficiaries, inventory, location_overrides=overrides)

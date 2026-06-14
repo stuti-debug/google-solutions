@@ -16,6 +16,10 @@ def get_priority_scores(session_id):
         
         # Fetch beneficiaries from SQLite/Firestore
         beneficiaries = store.get_session_rows(session_id, file_type="beneficiary")
+        if not beneficiaries:
+            from routes.data import _get_firestore_session_page
+            fs_data = _get_firestore_session_page(session_id, "beneficiary", 1, 1000)
+            beneficiaries = fs_data.get("rows", [])
         # Fetch location overrides
         overrides = store.get_location_overrides(session_id)
         
