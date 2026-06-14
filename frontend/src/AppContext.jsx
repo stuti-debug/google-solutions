@@ -29,9 +29,9 @@ const protectedScreens = new Set([
 ]);
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const BACKEND_OFFLINE_MESSAGE = 'Backend server is offline. Start Flask on port 8000 and try again.';
+const BACKEND_OFFLINE_MESSAGE = 'Backend server is offline or waking up. Please wait up to 60 seconds and try again.';
 const REQUEST_TIMEOUTS = {
-  health: 4000,
+  health: 60000,
   upload: 30000,
   status: 10000,
 };
@@ -108,6 +108,10 @@ export const AppProvider = ({ children }) => {
   };
 
   const checkBackendHealth = useCallback(async ({ silent = false } = {}) => {
+    let loadingToastId;
+    if (!silent) {
+      loadingToastId = toast.loading('Connecting to backend server (waking it up from sleep)...');
+    }
     try {
       const response = await apiFetchWithTimeout(
         `${API_BASE_URL}/health`,
@@ -121,8 +125,10 @@ export const AppProvider = ({ children }) => {
         throw new Error(BACKEND_OFFLINE_MESSAGE);
       }
 
+      if (loadingToastId) toast.dismiss(loadingToastId);
       return { ok: true };
     } catch {
+      if (loadingToastId) toast.dismiss(loadingToastId);
       const message = BACKEND_OFFLINE_MESSAGE;
       if (!silent) {
         toast.error(message);
@@ -476,6 +482,11 @@ export const AppProvider = ({ children }) => {
 
     return () => unsubscribe();
   }, []);
+
+  // Start waking up the backend server immediately on app mount (in case it is in Render sleep mode)
+  useEffect(() => {
+    checkBackendHealth({ silent: true });
+  }, [checkBackendHealth]);
 
   // Subscribe to Cloud Firestore real-time session changes for multiplayer collaboration
   useEffect(() => {
