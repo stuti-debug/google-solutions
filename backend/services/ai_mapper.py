@@ -79,10 +79,10 @@ class GeminiAIMapper:
                         generation_config=GenerationConfig(temperature=temperature),
                     )
                     try:
-                        response = future.result(timeout=60.0)
+                        response = future.result(timeout=10.0)
                         return self._extract_text(response)
                     except concurrent.futures.TimeoutError:
-                        raise AIMapperError("LLM pipeline exceeded 60 seconds timeout. Fallback to manual mapping required.")
+                        raise AIMapperError("LLM pipeline exceeded 10 seconds timeout. Fallback to manual mapping required.")
                 finally:
                     executor.shutdown(wait=False)
             except Exception as exc:

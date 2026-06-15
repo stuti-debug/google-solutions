@@ -441,7 +441,7 @@ const MapView = () => {
                 }}
               >
                 {/* Crisis zone markers — never clustered, each zone must be individually visible */}
-                {priorities.map((item) => (
+                {priorities.filter(item => item.lat != null && item.lng != null).map((item) => (
                   <Marker
                     key={item.id}
                     position={{ lat: item.lat, lng: item.lng }}

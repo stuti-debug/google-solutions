@@ -304,16 +304,49 @@ class SessionStore:
         try:
             from core.firebase import get_db
             db = get_db()
-            db.collection("sessions").document(session_id).set({
-                "session_id": session_id,
-                "file_type": session_file_type,
-                "record_count": int(len(df)),
-                "columns": columns,
-                "dtypes": dtypes,
-                "profile": profile,
-                "summary": combined_summary,
-                "updated_at": now
-            }, merge=True)
+            if db is not None:
+                db.collection("sessions").document(session_id).set({
+                    "session_id": session_id,
+                    "file_type": session_file_type,
+                    "record_count": int(len(df)),
+                    "columns": columns,
+                    "dtypes": dtypes,
+                    "profile": profile,
+                    "summary": combined_summary,
+                    "updated_at": now
+                }, merge=True)
+                
+                if incoming_records:
+                    from firebase_admin import firestore
+                    target_collection = "beneficiaries"
+                    if file_type in {"inventory", "inventories"}:
+                        target_collection = "inventory"
+                    elif file_type in {"donor", "donors"}:
+                        target_collection = "donors"
+                    
+                    batch = db.batch()
+                    count = 0
+                    for idx, row in enumerate(incoming_records):
+                        row_index = int(current_max) + idx + 1
+                        doc_ref = db.collection(target_collection).document()
+                        payload = dict(row)
+                        # Remove internal SQLite fields from Firestore payload
+                        for k in list(payload.keys()):
+                            if k.startswith("_") or k in ("session_id", "file_type", "row_index"):
+                                payload.pop(k, None)
+                        
+                        payload["session_id"] = session_id
+                        payload["file_type"] = file_type
+                        payload["row_index"] = row_index
+                        payload["synced_at"] = firestore.SERVER_TIMESTAMP
+                        batch.set(doc_ref, payload)
+                        count += 1
+                        if count == 400:
+                            batch.commit()
+                            batch = db.batch()
+                            count = 0
+                    if count > 0:
+                        batch.commit()
         except Exception as fe:
             print(f"Firestore session sync failed: {fe}")
 

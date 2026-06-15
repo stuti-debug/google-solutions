@@ -131,6 +131,7 @@ const QueryChat = () => {
     
     setQueryLoading(false);
     if (result && result.answer) {
+      try { incrementUsage('queries'); } catch (e) {}
       setMessages((prev) => [
         ...prev, 
         { 

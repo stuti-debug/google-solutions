@@ -146,9 +146,11 @@ const DashboardTabs = () => {
     if (cleanedData?.documentsByType?.[requestedType] && cleanedData.documentsByType[requestedType].length > 0) {
       setRecords(cleanedData.documentsByType[requestedType]);
     } else if (cleanedData?.cleanedDocuments && cleanedData.cleanedDocuments.length > 0 && cleanedData.fileType !== 'multiple') {
-      setRecords(
-        cleanedData.cleanedDocuments.filter((row) => !row._file_type || row._file_type === requestedType),
-      );
+      if (String(cleanedData.fileType).toLowerCase().includes(requestedType)) {
+        setRecords(cleanedData.cleanedDocuments);
+      } else {
+        setRecords([]);
+      }
     } else if (sessionId) {
       apiFetch(`${API_BASE_URL}/data/${sessionId}?page=1&limit=200&file_type=${requestedType}`)
         .then(res => res.json())
