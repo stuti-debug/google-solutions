@@ -53,6 +53,7 @@ const QueryChat = () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const speechSupported = !!SpeechRecognition;
   const recognitionRef = useRef(null);
+  const handleQueryRef = useRef(null);
   const [listening, setListening] = useState(false);
   const [speechLang, setSpeechLang] = useState(() => localStorage.getItem('crisisgrid_speech_lang') || 'hi-IN');
 
@@ -88,10 +89,18 @@ const QueryChat = () => {
     };
     rec.onresult = (e) => {
       let transcript = '';
+      let isFinal = false;
       for (let i = 0; i < e.results.length; i++) {
         transcript += e.results[i][0].transcript;
+        if (e.results[i].isFinal) isFinal = true;
       }
       setInputValue(transcript);
+      if (isFinal) {
+        rec.stop();
+        if (handleQueryRef.current) {
+          handleQueryRef.current(transcript);
+        }
+      }
     };
 
     rec.start();
@@ -150,6 +159,8 @@ const QueryChat = () => {
       ]);
     }
   };
+
+  handleQueryRef.current = handleQuery;
 
   const handleSuggestionClick = (suggestion) => {
     setInputValue(suggestion);
